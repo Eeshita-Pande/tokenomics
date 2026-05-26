@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Quality } from "@/lib/ai-economics";
-import type { AiSource } from "@/db/schema";
+import type { AiSource } from "@/lib/ai-economics";
+import { Logo } from "@/components/Logo";
 
 export type BarDatum = {
   group: string;
@@ -12,11 +12,9 @@ export type BarDatum = {
   value: number | null;
   low: number | null;
   high: number | null;
-  quality: Quality | null;
   methodology: string;
   sources: AiSource[];
   note: string | null;
-  footnoteRef: number | null;
 };
 
 type Props = {
@@ -25,17 +23,9 @@ type Props = {
   serieses: { id: string; color: string; label: string }[];
   yFormat: (v: number) => string;
   height?: number;
-  onHover?: (d: BarDatum | null) => void;
 };
 
-const QUALITY_COLOR: Record<Quality, string> = {
-  sourced: "#0a6d3a",
-  calculated: "#0f4c81",
-  inconsistent: "#b8002e",
-  estimated: "#6b6b6b",
-};
-
-const PAD = { top: 36, right: 24, bottom: 60, left: 70 };
+const PAD = { top: 44, right: 24, bottom: 56, left: 70 };
 
 function niceStep(rough: number): number {
   if (rough <= 0) return 1;
@@ -69,7 +59,6 @@ export function BarChart({
   serieses,
   yFormat,
   height = 460,
-  onHover,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(1000);
@@ -98,6 +87,7 @@ export function BarChart({
   const groupPadding = 14;
   const barAreaW = groupW - groupPadding;
   const barW = Math.max(barAreaW / serieses.length - 2, 6);
+  const logoSize = Math.min(Math.max(barW + 4, 14), 22);
 
   const xGroupStart = (gi: number) => PAD.left + gi * groupW + groupPadding / 2;
   const yAt = (v: number) =>
@@ -112,11 +102,10 @@ export function BarChart({
   const zeroY = yAt(0);
 
   const handleEnter = (
-    e: React.MouseEvent<SVGRectElement>,
+    e: React.MouseEvent<SVGRectElement | SVGGElement>,
     d: BarDatum,
   ) => {
     setHover(d);
-    onHover?.(d);
     const wrap = wrapRef.current?.getBoundingClientRect();
     if (!wrap) return;
     setHoverPos({ x: e.clientX - wrap.left, y: e.clientY - wrap.top });
@@ -124,7 +113,6 @@ export function BarChart({
 
   const handleLeave = () => {
     setHover(null);
-    onHover?.(null);
     setHoverPos(null);
   };
 
@@ -208,21 +196,38 @@ export function BarChart({
 
         {groups.map((g, gi) =>
           serieses.map((s, si) => {
-            const d = data.find((d) => d.group === g && d.series === s.id);
+            const d = data.find((dx) => dx.group === g && dx.series === s.id);
             const x = xGroupStart(gi) + si * (barW + 2);
             const value = d?.value ?? null;
-            if (
-              value === null ||
-              !Number.isFinite(value) ||
-              !d
-            ) {
+            const barCenterX = x + barW / 2;
+            if (value === null || !Number.isFinite(value) || !d) {
               return (
                 <g key={`${g}-${s.id}-empty`}>
+                  <foreignObject
+                    x={barCenterX - logoSize / 2}
+                    y={PAD.top - logoSize + 2}
+                    width={logoSize}
+                    height={logoSize}
+                    pointerEvents="none"
+                  >
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: hover ? 0.18 : 0.35,
+                      }}
+                    >
+                      <Logo ticker={s.id} size={logoSize} title={s.label} />
+                    </div>
+                  </foreignObject>
                   <line
                     x1={x + 1}
                     x2={x + barW - 1}
-                    y1={zeroY + 6}
-                    y2={zeroY + 6}
+                    y1={zeroY + 4}
+                    y2={zeroY + 4}
                     stroke="var(--hairline-strong)"
                     strokeDasharray="2,2"
                   />
@@ -231,53 +236,54 @@ export function BarChart({
             }
             const y = value >= 0 ? yAt(value) : zeroY;
             const h = Math.abs(yAt(value) - zeroY);
-            const isHover =
-              hover?.group === g && hover?.series === s.id;
+            const isHover = hover?.group === g && hover?.series === s.id;
+            const logoY =
+              value >= 0
+                ? Math.max(y - logoSize - 4, PAD.top - logoSize - 2)
+                : y + h + 4;
             return (
-              <g key={`${g}-${s.id}`}>
+              <g
+                key={`${g}-${s.id}`}
+                onMouseEnter={(e) => handleEnter(e, d)}
+                onMouseMove={(e) => {
+                  const wrap = wrapRef.current?.getBoundingClientRect();
+                  if (wrap)
+                    setHoverPos({
+                      x: e.clientX - wrap.left,
+                      y: e.clientY - wrap.top,
+                    });
+                }}
+                onMouseLeave={handleLeave}
+                style={{ cursor: "help" }}
+              >
                 <rect
                   x={x}
                   y={y}
                   width={barW}
                   height={Math.max(h, 1)}
                   fill={s.color}
-                  opacity={isHover ? 1 : hover ? 0.35 : 0.92}
-                  onMouseEnter={(e) => handleEnter(e, d)}
-                  onMouseMove={(e) => {
-                    const wrap = wrapRef.current?.getBoundingClientRect();
-                    if (wrap)
-                      setHoverPos({
-                        x: e.clientX - wrap.left,
-                        y: e.clientY - wrap.top,
-                      });
-                  }}
-                  onMouseLeave={handleLeave}
-                  style={{ cursor: "help" }}
+                  opacity={isHover ? 1 : hover ? 0.32 : 0.92}
                 />
-                {d.quality && (
-                  <circle
-                    cx={x + barW / 2}
-                    cy={value >= 0 ? y - 6 : y + h + 6}
-                    r={3}
-                    fill={QUALITY_COLOR[d.quality]}
-                    stroke="var(--background)"
-                    strokeWidth={1}
-                    pointerEvents="none"
-                  />
-                )}
-                {d.footnoteRef !== null && (
-                  <text
-                    x={x + barW / 2}
-                    y={value >= 0 ? y - 14 : y + h + 16}
-                    textAnchor="middle"
-                    fontSize={9}
-                    fontFamily="var(--font-roboto-mono), monospace"
-                    fill="var(--muted)"
-                    pointerEvents="none"
+                <foreignObject
+                  x={barCenterX - logoSize / 2}
+                  y={logoY}
+                  width={logoSize}
+                  height={logoSize}
+                  pointerEvents="none"
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: hover && !isHover ? 0.35 : 1,
+                    }}
                   >
-                    [{d.footnoteRef}]
-                  </text>
-                )}
+                    <Logo ticker={s.id} size={logoSize} title={s.label} />
+                  </div>
+                </foreignObject>
               </g>
             );
           }),
@@ -288,29 +294,17 @@ export function BarChart({
         <div
           className="pointer-events-none absolute bg-white border hairline-strong shadow-md p-3 text-[12px] leading-[1.5]"
           style={{
-            left: Math.min(hoverPos.x + 14, width - 360),
-            top: Math.min(hoverPos.y - 20, height + 100),
-            maxWidth: 360,
-            minWidth: 280,
+            left: Math.min(hoverPos.x + 14, width - 320),
+            top: Math.min(hoverPos.y + 8, height - 60),
+            maxWidth: 320,
+            minWidth: 260,
+            zIndex: 10,
           }}
         >
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
-              {hover.label}
-            </span>
-            <span
-              className="text-[10px] uppercase tracking-[0.12em] px-1.5 py-0.5"
-              style={{
-                background: hover.quality
-                  ? QUALITY_COLOR[hover.quality]
-                  : "var(--muted)",
-                color: "white",
-              }}
-            >
-              {hover.quality ?? "unknown"}
-            </span>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
+            {hover.label}
           </div>
-          <div className="num text-[18px] mt-1 font-medium">
+          <div className="num text-[18px] mt-0.5 font-medium">
             {hover.value !== null ? yFormat(hover.value) : "—"}
             {hover.low !== null && hover.high !== null && (
               <span className="text-[12px] text-[color:var(--muted)] ml-2">
@@ -322,15 +316,12 @@ export function BarChart({
             {hover.methodology}
           </div>
           {hover.note && (
-            <div className="mt-2 text-[11px] text-[color:var(--muted)] italic border-l-2 hairline-strong pl-2">
+            <div className="mt-2 text-[11px] text-[color:var(--muted)] italic">
               {hover.note}
             </div>
           )}
           {hover.sources.length > 0 && (
             <div className="mt-2 pt-2 border-t hairline">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted)] mb-1">
-                Sources
-              </div>
               <ul className="space-y-0.5">
                 {hover.sources.map((s, i) => (
                   <li key={i} className="text-[11px]">
@@ -352,5 +343,3 @@ export function BarChart({
     </div>
   );
 }
-
-export const QUALITY_COLOR_MAP = QUALITY_COLOR;

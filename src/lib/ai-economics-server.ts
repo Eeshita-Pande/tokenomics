@@ -1,7 +1,12 @@
 import "server-only";
 import { db, schema } from "@/db";
-import type { AiEconomicsFact, AiSource } from "@/db/schema";
-import type { EnrichedFact, Metric, Quality } from "@/lib/ai-economics";
+import type { AiEconomicsFact } from "@/db/schema";
+import type {
+  AiSource,
+  EnrichedFact,
+  Metric,
+  Quality,
+} from "@/lib/ai-economics";
 
 function parseSources(raw: string): AiSource[] {
   try {

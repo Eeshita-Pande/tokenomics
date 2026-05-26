@@ -1,9 +1,13 @@
 import "dotenv/config";
 import { db, schema } from "../src/db";
 
-type Source = { name: string; url: string; date?: string; snippet?: string };
+type Source = { name: string; url: string };
 type Quality = "sourced" | "calculated" | "inconsistent" | "estimated";
-type Metric = "ai_capex" | "ai_capex_amortized" | "ai_revenue" | "ai_operating_profit";
+type Metric =
+  | "ai_capex"
+  | "ai_capex_amortized"
+  | "ai_revenue"
+  | "ai_operating_profit";
 
 type Fact = {
   ticker: string;
@@ -17,9 +21,6 @@ type Fact = {
   sources: Source[];
   note?: string;
 };
-
-const NVDA_PR = (fy: number) =>
-  `https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-${fy}`;
 
 const PRIVATE_COMPANIES = [
   {
@@ -40,6 +41,42 @@ const PRIVATE_COMPANIES = [
   },
 ];
 
+// Reusable primary-source URLs.
+const NVDA_10K = {
+  2022: "https://www.sec.gov/Archives/edgar/data/1045810/000104581022000036/nvda-20220130.htm",
+  2023: "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/nvda-20230129.htm",
+  2024: "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+  2025: "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+  2026: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+};
+
+const AMZN_10K = {
+  2022: "https://www.sec.gov/Archives/edgar/data/1018724/000101872423000004/amzn-20221231.htm",
+  2023: "https://www.sec.gov/Archives/edgar/data/1018724/000101872424000008/amzn-20231231.htm",
+  2024: "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+  2025: "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+};
+const AMZN_Q1_2026_10Q =
+  "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000014/amzn-20260331.htm";
+
+const GOOG_10K = {
+  2022: "https://www.sec.gov/Archives/edgar/data/1652044/000165204423000016/goog-20221231.htm",
+  2023: "https://www.sec.gov/Archives/edgar/data/1652044/000165204424000022/goog-20231231.htm",
+  2024: "https://www.sec.gov/Archives/edgar/data/1652044/000165204425000014/goog-20241231.htm",
+  2025: "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000018/goog-20251231.htm",
+};
+const GOOG_Q1_2026_8K =
+  "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000043/googexhibit991q12026.htm";
+
+const MSFT_10K = {
+  2022: "https://www.sec.gov/Archives/edgar/data/789019/000156459022026876/msft-10k_20220630.htm",
+  2023: "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/msft-20230630.htm",
+  2024: "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+  2025: "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+};
+const MSFT_Q3_FY26_10Q =
+  "https://www.sec.gov/Archives/edgar/data/0000789019/000119312526191507/msft-20260331.htm";
+
 const FACTS: Fact[] = [
   // ============ NVIDIA (FY ends late January) ============
   {
@@ -49,14 +86,8 @@ const FACTS: Fact[] = [
     value: 10.61e9,
     quality: "sourced",
     methodology:
-      "Data Center segment revenue, reported in NVIDIA's Q4 FY22 press release and 10-K segment table.",
-    sources: [
-      { name: "NVIDIA Q4 FY22 press release", url: NVDA_PR(2022) },
-      {
-        name: "NVIDIA 10-K FY22",
-        url: "https://www.sec.gov/Archives/edgar/data/0001045810/000104581022000036/nvda-20220130.htm",
-      },
-    ],
+      "Data Center segment revenue, NVIDIA FY22 10-K (year ended Jan 30, 2022).",
+    sources: [{ name: "NVIDIA 10-K FY22 (SEC)", url: NVDA_10K[2022] }],
   },
   {
     ticker: "NVDA",
@@ -64,44 +95,36 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 15.01e9,
     quality: "sourced",
-    methodology: "Data Center segment revenue (FY ended Jan 2023).",
-    sources: [
-      { name: "NVIDIA Q4 FY23 press release", url: NVDA_PR(2023) },
-      {
-        name: "NVIDIA 10-K FY23",
-        url: "https://www.sec.gov/Archives/edgar/data/0001045810/000104581023000017/nvda-20230129.htm",
-      },
-    ],
+    methodology: "Data Center segment revenue, FY23 10-K (year ended Jan 29, 2023).",
+    sources: [{ name: "NVIDIA 10-K FY23 (SEC)", url: NVDA_10K[2023] }],
   },
   {
     ticker: "NVDA",
     metric: "ai_revenue",
     fy: 2024,
-    value: 47.5e9,
+    value: 47.525e9,
     quality: "sourced",
-    methodology: "Data Center segment revenue (FY ended Jan 2024).",
-    sources: [
-      { name: "NVIDIA Q4 FY24 press release", url: NVDA_PR(2024) },
-      {
-        name: "NVIDIA 10-K FY24",
-        url: "https://www.sec.gov/Archives/edgar/data/0001045810/000104581024000029/nvda-20240128.htm",
-      },
-    ],
+    methodology: "Data Center segment revenue, FY24 10-K (year ended Jan 28, 2024).",
+    sources: [{ name: "NVIDIA 10-K FY24 (SEC)", url: NVDA_10K[2024] }],
   },
   {
     ticker: "NVDA",
     metric: "ai_revenue",
     fy: 2025,
-    value: 115.2e9,
+    value: 115.191e9,
     quality: "sourced",
-    methodology: "Data Center segment revenue (FY ended Jan 2025).",
-    sources: [
-      { name: "NVIDIA Q4 FY25 press release", url: NVDA_PR(2025) },
-      {
-        name: "NVIDIA 10-K FY25",
-        url: "https://www.sec.gov/Archives/edgar/data/0001045810/000104581025000023/nvda-20250126.htm",
-      },
-    ],
+    methodology: "Data Center segment revenue, FY25 10-K (year ended Jan 26, 2025).",
+    sources: [{ name: "NVIDIA 10-K FY25 (SEC)", url: NVDA_10K[2025] }],
+  },
+  {
+    ticker: "NVDA",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 193.7e9,
+    quality: "sourced",
+    methodology: "Data Center segment revenue, FY26 10-K (year ended Jan 25, 2026). Full-year actual.",
+    sources: [{ name: "NVIDIA 10-K FY26 (SEC)", url: NVDA_10K[2026] }],
+    note: "NVIDIA's fiscal year ends in late January, so FY26 covers calendar 2025 plus three weeks of January 2026.",
   },
   {
     ticker: "NVDA",
@@ -110,14 +133,8 @@ const FACTS: Fact[] = [
     value: 4.598e9,
     quality: "sourced",
     methodology:
-      "Compute & Networking reportable segment operating income — closest proxy for AI segment operating profit since NVIDIA does not separately disclose Data Center op income.",
-    sources: [
-      {
-        name: "NVIDIA 10-K FY22 reportable segments (Stock Analysis On Net)",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/NVIDIA-Corp/Ratios/Reportable-Segments",
-      },
-    ],
-    note: "Compute & Networking ≈ Data Center + networking; Data Center is the dominant share.",
+      "Compute & Networking reportable-segment operating income from the FY22 10-K segment footnote. Closest disclosed proxy for AI segment op income; Data Center is the dominant share of this segment.",
+    sources: [{ name: "NVIDIA 10-K FY22 (SEC)", url: NVDA_10K[2022] }],
   },
   {
     ticker: "NVDA",
@@ -125,13 +142,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 5.083e9,
     quality: "sourced",
-    methodology: "Compute & Networking segment op income (FY23).",
-    sources: [
-      {
-        name: "NVIDIA reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/NVIDIA-Corp/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Compute & Networking segment operating income, FY23 10-K.",
+    sources: [{ name: "NVIDIA 10-K FY23 (SEC)", url: NVDA_10K[2023] }],
   },
   {
     ticker: "NVDA",
@@ -139,13 +151,8 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 32.016e9,
     quality: "sourced",
-    methodology: "Compute & Networking segment op income (FY24).",
-    sources: [
-      {
-        name: "NVIDIA reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/NVIDIA-Corp/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Compute & Networking segment operating income, FY24 10-K.",
+    sources: [{ name: "NVIDIA 10-K FY24 (SEC)", url: NVDA_10K[2024] }],
   },
   {
     ticker: "NVDA",
@@ -153,13 +160,18 @@ const FACTS: Fact[] = [
     fy: 2025,
     value: 82.875e9,
     quality: "sourced",
-    methodology: "Compute & Networking segment op income (FY25).",
-    sources: [
-      {
-        name: "NVIDIA reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/NVIDIA-Corp/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Compute & Networking segment operating income, FY25 10-K.",
+    sources: [{ name: "NVIDIA 10-K FY25 (SEC)", url: NVDA_10K[2025] }],
+  },
+  {
+    ticker: "NVDA",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: 130.1e9,
+    quality: "sourced",
+    methodology:
+      "Compute & Networking segment operating income, FY26 10-K. Includes the $4.5B H20 inventory charge taken in Q1 FY26.",
+    sources: [{ name: "NVIDIA 10-K FY26 (SEC)", url: NVDA_10K[2026] }],
   },
 
   // ============ AMAZON (CY ends Dec 31) ============
@@ -169,14 +181,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 80.096e9,
     quality: "sourced",
-    methodology: "AWS segment net sales as reported in Amazon 2022 10-K.",
-    sources: [
-      {
-        name: "Amazon 10-K FY22 reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
-    note: "AWS revenue treated as AI-segment proxy; AWS includes non-AI workloads. Apply AI-share slider for AI-only attribution.",
+    methodology: "AWS segment net sales, Amazon 2022 10-K.",
+    sources: [{ name: "Amazon 10-K FY22 (SEC)", url: AMZN_10K[2022] }],
   },
   {
     ticker: "AMZN",
@@ -185,12 +191,7 @@ const FACTS: Fact[] = [
     value: 90.757e9,
     quality: "sourced",
     methodology: "AWS segment net sales, 2023 10-K.",
-    sources: [
-      {
-        name: "Amazon reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY23 (SEC)", url: AMZN_10K[2023] }],
   },
   {
     ticker: "AMZN",
@@ -199,12 +200,7 @@ const FACTS: Fact[] = [
     value: 107.556e9,
     quality: "sourced",
     methodology: "AWS segment net sales, 2024 10-K.",
-    sources: [
-      {
-        name: "Amazon Q4 2024 8-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001018724/000101872425000002/amzn-20241231xex991.htm",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY24 (SEC)", url: AMZN_10K[2024] }],
   },
   {
     ticker: "AMZN",
@@ -213,12 +209,17 @@ const FACTS: Fact[] = [
     value: 128.725e9,
     quality: "sourced",
     methodology: "AWS segment net sales, 2025 10-K.",
-    sources: [
-      {
-        name: "Amazon Q4 2025 8-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001018724/000110465925033450/tm254123d3_ex99-1.htm",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY25 (SEC)", url: AMZN_10K[2025] }],
+  },
+  {
+    ticker: "AMZN",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 150.4e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from Q1 2026 AWS net sales of $37.6B (×4). Q1 actual from Amazon Q1 2026 10-Q.",
+    sources: [{ name: "Amazon Q1 2026 10-Q (SEC)", url: AMZN_Q1_2026_10Q }],
   },
   {
     ticker: "AMZN",
@@ -226,13 +227,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 22.841e9,
     quality: "sourced",
-    methodology: "AWS segment operating income from 2022 10-K.",
-    sources: [
-      {
-        name: "Amazon reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "AWS segment operating income, 2022 10-K.",
+    sources: [{ name: "Amazon 10-K FY22 (SEC)", url: AMZN_10K[2022] }],
   },
   {
     ticker: "AMZN",
@@ -241,12 +237,7 @@ const FACTS: Fact[] = [
     value: 24.631e9,
     quality: "sourced",
     methodology: "AWS segment operating income, 2023 10-K.",
-    sources: [
-      {
-        name: "Amazon reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY23 (SEC)", url: AMZN_10K[2023] }],
   },
   {
     ticker: "AMZN",
@@ -255,12 +246,7 @@ const FACTS: Fact[] = [
     value: 39.834e9,
     quality: "sourced",
     methodology: "AWS segment operating income, 2024 10-K.",
-    sources: [
-      {
-        name: "Amazon reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY24 (SEC)", url: AMZN_10K[2024] }],
   },
   {
     ticker: "AMZN",
@@ -269,12 +255,17 @@ const FACTS: Fact[] = [
     value: 45.606e9,
     quality: "sourced",
     methodology: "AWS segment operating income, 2025 10-K.",
-    sources: [
-      {
-        name: "Amazon reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Amazon 10-K FY25 (SEC)", url: AMZN_10K[2025] }],
+  },
+  {
+    ticker: "AMZN",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: 56.8e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from Q1 2026 AWS operating income of $14.2B (×4). Q1 actual from Amazon Q1 2026 10-Q.",
+    sources: [{ name: "Amazon Q1 2026 10-Q (SEC)", url: AMZN_Q1_2026_10Q }],
   },
   {
     ticker: "AMZN",
@@ -283,14 +274,8 @@ const FACTS: Fact[] = [
     value: 63.645e9,
     quality: "sourced",
     methodology:
-      "Whole-company capex (PaymentsToAcquireProductiveAssets, 10-K cash-flow statement). Amazon's MD&A attributes the bulk to AWS technology infrastructure. Treated here as the AI-attributable upper bound per the same convention isaiprofitable.com uses.",
-    sources: [
-      {
-        name: "Amazon PP&E summary",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Analysis/Property-Plant-and-Equipment",
-      },
-    ],
-    note: "AI attribution = 100% per MD&A is the bear-case framing. AI-share slider applied separately.",
+      "Whole-company \"Purchases of property and equipment\" from the 2022 10-K cash-flow statement. Amazon's MD&A attributes the bulk to AWS technology infrastructure.",
+    sources: [{ name: "Amazon 10-K FY22 (SEC)", url: AMZN_10K[2022] }],
   },
   {
     ticker: "AMZN",
@@ -298,13 +283,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 52.729e9,
     quality: "sourced",
-    methodology: "Whole-company capex, 2023 10-K. Same attribution caveat.",
-    sources: [
-      {
-        name: "Amazon PP&E summary",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Analysis/Property-Plant-and-Equipment",
-      },
-    ],
+    methodology: "Whole-company capex, 2023 10-K cash-flow statement.",
+    sources: [{ name: "Amazon 10-K FY23 (SEC)", url: AMZN_10K[2023] }],
   },
   {
     ticker: "AMZN",
@@ -313,13 +293,8 @@ const FACTS: Fact[] = [
     value: 82.999e9,
     quality: "sourced",
     methodology:
-      "Whole-company capex, 2024 10-K. MD&A explicitly attributes increase to AWS infrastructure including AI/ML.",
-    sources: [
-      {
-        name: "Amazon PP&E summary",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Analysis/Property-Plant-and-Equipment",
-      },
-    ],
+      "Whole-company capex, 2024 10-K. MD&A explicitly attributes the increase to AWS infrastructure including AI/ML.",
+    sources: [{ name: "Amazon 10-K FY24 (SEC)", url: AMZN_10K[2024] }],
   },
   {
     ticker: "AMZN",
@@ -327,13 +302,20 @@ const FACTS: Fact[] = [
     fy: 2025,
     value: 131.819e9,
     quality: "sourced",
-    methodology: "Whole-company capex, 2025 10-K. MD&A AI attribution.",
-    sources: [
-      {
-        name: "Amazon PP&E summary",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Amazoncom-Inc/Analysis/Property-Plant-and-Equipment",
-      },
-    ],
+    methodology: "Whole-company capex, 2025 10-K cash-flow statement.",
+    sources: [{ name: "Amazon 10-K FY25 (SEC)", url: AMZN_10K[2025] }],
+  },
+  {
+    ticker: "AMZN",
+    metric: "ai_capex",
+    fy: 2026,
+    value: 176.8e9,
+    low: 176.8e9,
+    high: 200e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from Q1 2026 \"Purchases of property and equipment\" of $44.2B (×4). Range upper bound is CEO Andy Jassy's ~$200B FY26 guidance from the Q4 2025 call (Feb 2026).",
+    sources: [{ name: "Amazon Q1 2026 10-Q (SEC)", url: AMZN_Q1_2026_10Q }],
   },
 
   // ============ ALPHABET / GOOG (CY ends Dec 31) ============
@@ -343,17 +325,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 26.28e9,
     quality: "sourced",
-    methodology: "Google Cloud segment revenue, 2022 10-K.",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-      {
-        name: "Alphabet 2022 10-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001652044/000165204423000016/goog-20221231.htm",
-      },
-    ],
+    methodology: "Google Cloud segment revenue, Alphabet 2022 10-K.",
+    sources: [{ name: "Alphabet 10-K FY22 (SEC)", url: GOOG_10K[2022] }],
   },
   {
     ticker: "GOOG",
@@ -362,12 +335,7 @@ const FACTS: Fact[] = [
     value: 33.088e9,
     quality: "sourced",
     methodology: "Google Cloud segment revenue, 2023 10-K.",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Alphabet 10-K FY23 (SEC)", url: GOOG_10K[2023] }],
   },
   {
     ticker: "GOOG",
@@ -376,26 +344,26 @@ const FACTS: Fact[] = [
     value: 43.229e9,
     quality: "sourced",
     methodology: "Google Cloud segment revenue, 2024 10-K.",
-    sources: [
-      {
-        name: "Alphabet Q4 2024 8-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001652044/000165204425000010/googexhibit991q42024.htm",
-      },
-    ],
+    sources: [{ name: "Alphabet 10-K FY24 (SEC)", url: GOOG_10K[2024] }],
   },
   {
     ticker: "GOOG",
     metric: "ai_revenue",
     fy: 2025,
-    value: 58.705e9,
+    value: 58.789e9,
     quality: "sourced",
-    methodology: "Google Cloud segment revenue, 2025 10-K / Q4 2025 release.",
-    sources: [
-      {
-        name: "Alphabet Q4 2025 earnings release",
-        url: "https://s206.q4cdn.com/479360582/files/doc_financials/2025/q4/2025q4-alphabet-earnings-release.pdf",
-      },
-    ],
+    methodology: "Google Cloud segment revenue, 2025 10-K.",
+    sources: [{ name: "Alphabet 10-K FY25 (SEC)", url: GOOG_10K[2025] }],
+  },
+  {
+    ticker: "GOOG",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 80.0e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from Q1 2026 Google Cloud revenue of $20.0B (×4). Q1 actual from Alphabet Q1 2026 8-K Exhibit 99.1.",
+    sources: [{ name: "Alphabet Q1 2026 earnings (SEC 8-K)", url: GOOG_Q1_2026_8K }],
   },
   {
     ticker: "GOOG",
@@ -404,12 +372,7 @@ const FACTS: Fact[] = [
     value: -2.968e9,
     quality: "sourced",
     methodology: "Google Cloud segment operating loss, 2022 10-K.",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    sources: [{ name: "Alphabet 10-K FY22 (SEC)", url: GOOG_10K[2022] }],
   },
   {
     ticker: "GOOG",
@@ -417,13 +380,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 1.716e9,
     quality: "sourced",
-    methodology: "Google Cloud segment op income, 2023 10-K (first profitable year).",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Google Cloud segment operating income, 2023 10-K — first profitable year.",
+    sources: [{ name: "Alphabet 10-K FY23 (SEC)", url: GOOG_10K[2023] }],
   },
   {
     ticker: "GOOG",
@@ -431,13 +389,8 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 6.112e9,
     quality: "sourced",
-    methodology: "Google Cloud segment op income, 2024 10-K.",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Google Cloud segment operating income, 2024 10-K.",
+    sources: [{ name: "Alphabet 10-K FY24 (SEC)", url: GOOG_10K[2024] }],
   },
   {
     ticker: "GOOG",
@@ -445,13 +398,18 @@ const FACTS: Fact[] = [
     fy: 2025,
     value: 13.91e9,
     quality: "sourced",
-    methodology: "Google Cloud segment op income, 2025 10-K.",
-    sources: [
-      {
-        name: "Alphabet reportable segments",
-        url: "https://www.stock-analysis-on.net/NASDAQ/Company/Alphabet-Inc/Ratios/Reportable-Segments",
-      },
-    ],
+    methodology: "Google Cloud segment operating income, 2025 10-K.",
+    sources: [{ name: "Alphabet 10-K FY25 (SEC)", url: GOOG_10K[2025] }],
+  },
+  {
+    ticker: "GOOG",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: 26.4e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from Q1 2026 Google Cloud operating income of $6.6B (×4).",
+    sources: [{ name: "Alphabet Q1 2026 earnings (SEC 8-K)", url: GOOG_Q1_2026_8K }],
   },
   {
     ticker: "GOOG",
@@ -459,14 +417,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 31.485e9,
     quality: "sourced",
-    methodology: "Whole-company capex, 2022 10-K cash flow statement.",
-    sources: [
-      {
-        name: "Alphabet 2022 10-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001652044/000165204423000016/goog-20221231.htm",
-      },
-    ],
-    note: "Capex is whole-company; AI attribution per Alphabet MD&A states 60% of technical infrastructure assets are servers + networking equipment.",
+    methodology: "Whole-company capex (Purchases of property and equipment), 2022 10-K cash flow statement.",
+    sources: [{ name: "Alphabet 10-K FY22 (SEC)", url: GOOG_10K[2022] }],
   },
   {
     ticker: "GOOG",
@@ -475,12 +427,7 @@ const FACTS: Fact[] = [
     value: 32.251e9,
     quality: "sourced",
     methodology: "Whole-company capex, 2023 10-K.",
-    sources: [
-      {
-        name: "Alphabet 2023 10-K",
-        url: "https://www.sec.gov/Archives/edgar/data/0001652044/000165204424000022/goog-20231231.htm",
-      },
-    ],
+    sources: [{ name: "Alphabet 10-K FY23 (SEC)", url: GOOG_10K[2023] }],
   },
   {
     ticker: "GOOG",
@@ -489,29 +436,28 @@ const FACTS: Fact[] = [
     value: 52.535e9,
     quality: "sourced",
     methodology: "Whole-company capex, 2024 10-K.",
-    sources: [
-      {
-        name: "CNBC reporting Alphabet $75B 2025 capex plan",
-        url: "https://www.cnbc.com/2025/02/04/alphabet-expects-to-invest-about-75-billion-in-capex-in-2025.html",
-      },
-    ],
+    sources: [{ name: "Alphabet 10-K FY24 (SEC)", url: GOOG_10K[2024] }],
   },
   {
     ticker: "GOOG",
     metric: "ai_capex",
     fy: 2025,
     value: 91.4e9,
-    low: 91e9,
-    high: 93e9,
     quality: "sourced",
+    methodology: "Whole-company capex, 2025 10-K.",
+    sources: [{ name: "Alphabet 10-K FY25 (SEC)", url: GOOG_10K[2025] }],
+  },
+  {
+    ticker: "GOOG",
+    metric: "ai_capex",
+    fy: 2026,
+    value: 142.8e9,
+    low: 142.8e9,
+    high: 190e9,
+    quality: "calculated",
     methodology:
-      "Whole-company capex 2025 actual. Guidance raised to $91-93B in Q3 2025; final FY actual within that range.",
-    sources: [
-      {
-        name: "Alphabet Q4 2025 earnings release",
-        url: "https://s206.q4cdn.com/479360582/files/doc_financials/2025/q4/2025q4-alphabet-earnings-release.pdf",
-      },
-    ],
+      "Annualized from Q1 2026 capex of $35.7B (×4). Range upper bound is Alphabet's FY26 capex guidance of $180-$190B (raised on Q1 2026 call, including Intersect acquisition).",
+    sources: [{ name: "Alphabet Q1 2026 earnings (SEC 8-K)", url: GOOG_Q1_2026_8K }],
   },
 
   // ============ MICROSOFT (FY ends June 30) ============
@@ -522,18 +468,8 @@ const FACTS: Fact[] = [
     value: 75.251e9,
     quality: "sourced",
     methodology:
-      "Intelligent Cloud segment revenue, MSFT FY22 (ended June 2022). Closest segment proxy for AI/cloud revenue.",
-    sources: [
-      {
-        name: "MSFT FY22 Q4 press release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2022-Q4/press-release-webcast",
-      },
-      {
-        name: "MSFT 10-K FY22",
-        url: "https://www.sec.gov/Archives/edgar/data/0000789019/000156459022026876/msft-10k_20220630.htm",
-      },
-    ],
-    note: "MSFT segment shift in FY25 redistributed some Azure consumption to Productivity & MPC — FY25 numbers are not directly comparable to prior years.",
+      "Intelligent Cloud segment revenue, FY22 10-K (year ended June 30, 2022).",
+    sources: [{ name: "Microsoft 10-K FY22 (SEC)", url: MSFT_10K[2022] }],
   },
   {
     ticker: "MSFT",
@@ -541,13 +477,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 87.907e9,
     quality: "sourced",
-    methodology: "Intelligent Cloud segment revenue, FY23 (ended June 2023).",
-    sources: [
-      {
-        name: "MSFT FY23 Q4 press release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2023-Q4/press-release-webcast",
-      },
-    ],
+    methodology: "Intelligent Cloud segment revenue, FY23 10-K.",
+    sources: [{ name: "Microsoft 10-K FY23 (SEC)", url: MSFT_10K[2023] }],
   },
   {
     ticker: "MSFT",
@@ -555,13 +486,8 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 105.362e9,
     quality: "sourced",
-    methodology: "Intelligent Cloud segment revenue, FY24 (ended June 2024).",
-    sources: [
-      {
-        name: "MSFT 10-K FY24",
-        url: "https://www.sec.gov/Archives/edgar/data/0000789019/000095017024087843/msft-20240630.htm",
-      },
-    ],
+    methodology: "Intelligent Cloud segment revenue, FY24 10-K.",
+    sources: [{ name: "Microsoft 10-K FY24 (SEC)", url: MSFT_10K[2024] }],
   },
   {
     ticker: "MSFT",
@@ -570,13 +496,20 @@ const FACTS: Fact[] = [
     value: 106.265e9,
     quality: "sourced",
     methodology:
-      "Intelligent Cloud segment revenue, FY25 (ended June 2025). FY25 segment reorg redistributed some Azure consumption.",
-    sources: [
-      {
-        name: "MSFT FY25 Q4 release",
-        url: "https://www.microsoft.com/en-us/investor/earnings/fy-2025-q4/press-release-webcast",
-      },
-    ],
+      "Intelligent Cloud segment revenue, FY25 10-K. Microsoft restructured segments in Aug 2024; FY25 is not directly comparable to prior years.",
+    sources: [{ name: "Microsoft 10-K FY25 (SEC)", url: MSFT_10K[2025] }],
+    note: "FY25 segment recast: some Azure consumption was redistributed to Productivity & Business Processes.",
+  },
+  {
+    ticker: "MSFT",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 138.7e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from FY26 Q3 (quarter ended Mar 31, 2026) Intelligent Cloud revenue of $34.7B (×4).",
+    sources: [{ name: "Microsoft Q3 FY26 10-Q (SEC)", url: MSFT_Q3_FY26_10Q }],
+    note: "Microsoft's fiscal year ends June 30 — FY26 covers Jul 2025 to Jun 2026.",
   },
   {
     ticker: "MSFT",
@@ -584,13 +517,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 32.721e9,
     quality: "sourced",
-    methodology: "Intelligent Cloud segment operating income, FY22.",
-    sources: [
-      {
-        name: "MSFT FY22 Q4 release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2022-Q4/press-release-webcast",
-      },
-    ],
+    methodology: "Intelligent Cloud segment operating income, FY22 10-K.",
+    sources: [{ name: "Microsoft 10-K FY22 (SEC)", url: MSFT_10K[2022] }],
   },
   {
     ticker: "MSFT",
@@ -598,13 +526,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 37.884e9,
     quality: "sourced",
-    methodology: "Intelligent Cloud segment op income, FY23.",
-    sources: [
-      {
-        name: "MSFT FY23 Q4 release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2023-Q4/press-release-webcast",
-      },
-    ],
+    methodology: "Intelligent Cloud segment operating income, FY23 10-K.",
+    sources: [{ name: "Microsoft 10-K FY23 (SEC)", url: MSFT_10K[2023] }],
   },
   {
     ticker: "MSFT",
@@ -612,13 +535,8 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 49.584e9,
     quality: "sourced",
-    methodology: "Intelligent Cloud segment op income, FY24.",
-    sources: [
-      {
-        name: "MSFT 10-K FY24",
-        url: "https://www.sec.gov/Archives/edgar/data/0000789019/000095017024087843/msft-20240630.htm",
-      },
-    ],
+    methodology: "Intelligent Cloud segment operating income, FY24 10-K.",
+    sources: [{ name: "Microsoft 10-K FY24 (SEC)", url: MSFT_10K[2024] }],
   },
   {
     ticker: "MSFT",
@@ -627,13 +545,18 @@ const FACTS: Fact[] = [
     value: 44.589e9,
     quality: "sourced",
     methodology:
-      "Intelligent Cloud segment op income, FY25. Decline reflects segment reorganization redistribution.",
-    sources: [
-      {
-        name: "MSFT FY25 Q4 release",
-        url: "https://www.microsoft.com/en-us/investor/earnings/fy-2025-q4/press-release-webcast",
-      },
-    ],
+      "Intelligent Cloud segment operating income, FY25 10-K. The YoY decline reflects the Aug 2024 segment recast, not deteriorating economics.",
+    sources: [{ name: "Microsoft 10-K FY25 (SEC)", url: MSFT_10K[2025] }],
+  },
+  {
+    ticker: "MSFT",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: 55.0e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from FY26 Q3 Intelligent Cloud operating income of $13.75B (×4).",
+    sources: [{ name: "Microsoft Q3 FY26 10-Q (SEC)", url: MSFT_Q3_FY26_10Q }],
   },
   {
     ticker: "MSFT",
@@ -641,13 +564,8 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: 23.886e9,
     quality: "sourced",
-    methodology: "Additions to PP&E from cash flow statement, FY22.",
-    sources: [
-      {
-        name: "MSFT FY22 Q4 release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2022-Q4/press-release-webcast",
-      },
-    ],
+    methodology: "Additions to PP&E from FY22 10-K cash flow statement.",
+    sources: [{ name: "Microsoft 10-K FY22 (SEC)", url: MSFT_10K[2022] }],
   },
   {
     ticker: "MSFT",
@@ -655,13 +573,8 @@ const FACTS: Fact[] = [
     fy: 2023,
     value: 28.107e9,
     quality: "sourced",
-    methodology: "Additions to PP&E, FY23.",
-    sources: [
-      {
-        name: "MSFT FY23 Q4 release",
-        url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2023-Q4/press-release-webcast",
-      },
-    ],
+    methodology: "Additions to PP&E, FY23 10-K.",
+    sources: [{ name: "Microsoft 10-K FY23 (SEC)", url: MSFT_10K[2023] }],
   },
   {
     ticker: "MSFT",
@@ -669,13 +582,8 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 44.477e9,
     quality: "sourced",
-    methodology: "Additions to PP&E, FY24.",
-    sources: [
-      {
-        name: "MSFT 10-K FY24",
-        url: "https://www.sec.gov/Archives/edgar/data/0000789019/000095017024087843/msft-20240630.htm",
-      },
-    ],
+    methodology: "Additions to PP&E, FY24 10-K.",
+    sources: [{ name: "Microsoft 10-K FY24 (SEC)", url: MSFT_10K[2024] }],
   },
   {
     ticker: "MSFT",
@@ -684,13 +592,18 @@ const FACTS: Fact[] = [
     value: 64.551e9,
     quality: "sourced",
     methodology:
-      "Additions to PP&E, FY25. MSFT management explicitly attributes majority to AI infrastructure.",
-    sources: [
-      {
-        name: "MSFT FY25 Q4 release",
-        url: "https://www.microsoft.com/en-us/investor/earnings/fy-2025-q4/press-release-webcast",
-      },
-    ],
+      "Additions to PP&E, FY25 10-K. Management explicitly attributes majority to AI infrastructure.",
+    sources: [{ name: "Microsoft 10-K FY25 (SEC)", url: MSFT_10K[2025] }],
+  },
+  {
+    ticker: "MSFT",
+    metric: "ai_capex",
+    fy: 2026,
+    value: 123.5e9,
+    quality: "calculated",
+    methodology:
+      "Annualized from FY26 Q3 additions to PP&E of $30.9B (×4). Sourced from Q3 FY26 10-Q cash flow statement.",
+    sources: [{ name: "Microsoft Q3 FY26 10-Q (SEC)", url: MSFT_Q3_FY26_10Q }],
   },
 
   // ============ OPENAI (private; CY) ============
@@ -701,15 +614,11 @@ const FACTS: Fact[] = [
     value: 28e6,
     quality: "sourced",
     methodology:
-      "Total CY2022 recognized revenue, widely cited. Includes only pre-ChatGPT revenue plus December 2022 ARR.",
+      "Total CY2022 recognized revenue per The Information's reporting on OpenAI's internal financials.",
     sources: [
       {
-        name: "The Information: OpenAI 2022 losses doubled to $540M",
+        name: "The Information (May 2023)",
         url: "https://www.theinformation.com/articles/openais-losses-doubled-to-540-million-as-it-developed-chatgpt",
-      },
-      {
-        name: "SaaStr: OpenAI 3-year sprint",
-        url: "https://www.saastr.com/openai-crosses-12-billion-arr-the-3-year-sprint-that-redefined-whats-possible-in-scaling-software/",
       },
     ],
   },
@@ -718,19 +627,15 @@ const FACTS: Fact[] = [
     metric: "ai_revenue",
     fy: 2023,
     value: 1.6e9,
-    low: 1.6e9,
+    low: 1.3e9,
     high: 2.0e9,
     quality: "inconsistent",
     methodology:
-      "Reuters reported ARR at end of 2023 ~$1.6B; CFO later referenced ~$2B for 2023. Range reflects ARR-vs-recognized-revenue ambiguity.",
+      "Annualized run-rate at year-end 2023 was ~$1.6B per The Information; full-year recognized revenue tracked lower (~$1.3B). CFO references to ~$2B reflect run-rate exit.",
     sources: [
       {
-        name: "SiliconANGLE (citing Reuters)",
-        url: "https://siliconangle.com/2024/01/01/openais-annualized-revenue-reportedly-tops-1-6b/",
-      },
-      {
-        name: "SaaStr CFO trajectory",
-        url: "https://www.saastr.com/openai-crosses-12-billion-arr-the-3-year-sprint-that-redefined-whats-possible-in-scaling-software/",
+        name: "The Information / Reuters (Dec 2023)",
+        url: "https://www.marketscreener.com/quote/stock/MICROSOFT-CORPORATION-4835/news/OpenAI-annualized-revenue-tops-1-6-billion-The-Information-45653315/",
       },
     ],
   },
@@ -740,15 +645,12 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: 3.7e9,
     quality: "sourced",
-    methodology: "Recognized CY2024 revenue per The Information internal-docs reporting.",
+    methodology:
+      "Recognized CY2024 revenue per The New York Times (citing OpenAI financial documents), corroborated by CNBC.",
     sources: [
       {
-        name: "Epoch AI: OpenAI revenue",
-        url: "https://epoch.ai/data-insights/openai-revenue",
-      },
-      {
-        name: "DCD on The Information leak",
-        url: "https://www.datacenterdynamics.com/en/news/openai-training-and-inference-costs-could-reach-7bn-for-2024-ai-startup-set-to-lose-5bn-report/",
+        name: "CNBC (citing NYT-obtained docs)",
+        url: "https://www.cnbc.com/2024/09/27/openai-sees-5-billion-loss-this-year-on-3point7-billion-in-revenue.html",
       },
     ],
   },
@@ -756,24 +658,40 @@ const FACTS: Fact[] = [
     ticker: "OAI",
     metric: "ai_revenue",
     fy: 2025,
-    value: 13.1e9,
+    value: 13.0e9,
     quality: "sourced",
     methodology:
-      "Recognized CY2025 revenue per The Information. Annualized exit run-rate at year-end was ~$20B per CFO Sarah Friar.",
+      "Recognized CY2025 revenue per The Information / Fortune (citing OpenAI internal financial documents). H1 2025 was $4.3B; exit ARR ~$20B.",
     sources: [
       {
-        name: "Epoch AI: OpenAI revenue",
-        url: "https://epoch.ai/data-insights/openai-revenue",
+        name: "Fortune (Nov 2025)",
+        url: "https://fortune.com/2025/11/12/openai-cash-burn-rate-annual-losses-2028-profitable-2030-financial-documents/",
       },
       {
-        name: "the-decoder",
-        url: "https://the-decoder.com/openai-adds-111-billion-to-its-cash-burn-forecast-as-ai-costs-spiral-beyond-projections/",
-      },
-      {
-        name: "SaaStr ($20B CFO quote)",
-        url: "https://www.saastr.com/openai-crosses-12-billion-arr-the-3-year-sprint-that-redefined-whats-possible-in-scaling-software/",
+        name: "The Information (H1 2025 results)",
+        url: "https://www.theinformation.com/articles/openais-first-half-results-4-3-billion-sales-2-5-billion-cash-burn",
       },
     ],
+  },
+  {
+    ticker: "OAI",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 25.0e9,
+    quality: "sourced",
+    methodology:
+      "Annualized revenue run-rate of ~$25B as of Feb 2026, reported by The Information and confirmed by Reuters. Up from ~$20B exit ARR at end of 2025.",
+    sources: [
+      {
+        name: "The Information (Mar 2026)",
+        url: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap",
+      },
+      {
+        name: "Reuters / TradingView mirror",
+        url: "https://www.tradingview.com/news/reuters.com,2026:newsml_L4N3ZT0E1:0-openai-tops-25-billion-in-annualized-revenue-the-information-reports/",
+      },
+    ],
+    note: "OpenAI is private; figure is an annualized run-rate disclosed via press leaks.",
   },
   {
     ticker: "OAI",
@@ -781,10 +699,10 @@ const FACTS: Fact[] = [
     fy: 2022,
     value: -0.54e9,
     quality: "sourced",
-    methodology: "Operating loss per The Information reporting on internal financials.",
+    methodology: "Operating loss per The Information's May 2023 reporting on OpenAI internal financials.",
     sources: [
       {
-        name: "The Information",
+        name: "The Information (May 2023)",
         url: "https://www.theinformation.com/articles/openais-losses-doubled-to-540-million-as-it-developed-chatgpt",
       },
     ],
@@ -798,9 +716,13 @@ const FACTS: Fact[] = [
     high: -0.5e9,
     quality: "estimated",
     methodology:
-      "No clean disclosure for 2023 operating loss. Range bracketed by 2022 (-$540M) and 2024 (-$5B); midpoint approximation.",
-    sources: [],
-    note: "Pending direct citation. Mark as estimated.",
+      "No clean public disclosure for 2023 operating loss. Range bracketed by 2022 (-$540M) and 2024 (~-$5B).",
+    sources: [
+      {
+        name: "CNBC (Sep 2024) — context",
+        url: "https://www.cnbc.com/2024/09/27/openai-sees-5-billion-loss-this-year-on-3point7-billion-in-revenue.html",
+      },
+    ],
   },
   {
     ticker: "OAI",
@@ -809,15 +731,11 @@ const FACTS: Fact[] = [
     value: -5e9,
     quality: "sourced",
     methodology:
-      "Operating loss / cash burn ~$5B per The Information internal-docs reporting; confirmed by multiple secondary sources.",
+      "2024 loss ~$5B per OpenAI financial documents obtained by The New York Times and reported by CNBC.",
     sources: [
       {
-        name: "LessWrong summary of The Information",
-        url: "https://www.lesswrong.com/posts/CCQsQnCMWhJcCFY9x/openai-lost-usd5-billion-in-2024-and-its-losses-are",
-      },
-      {
-        name: "DCD on The Information",
-        url: "https://www.datacenterdynamics.com/en/news/openai-training-and-inference-costs-could-reach-7bn-for-2024-ai-startup-set-to-lose-5bn-report/",
+        name: "CNBC (Sep 2024)",
+        url: "https://www.cnbc.com/2024/09/27/openai-sees-5-billion-loss-this-year-on-3point7-billion-in-revenue.html",
       },
     ],
   },
@@ -825,20 +743,33 @@ const FACTS: Fact[] = [
     ticker: "OAI",
     metric: "ai_operating_profit",
     fy: 2025,
-    value: -9e9,
+    value: -8.5e9,
     low: -9e9,
     high: -8e9,
     quality: "sourced",
     methodology:
-      "Cash burn $8-9B per The Information internal docs and WSJ confirmations.",
+      "Cash burn $8-9B for 2025 per The Information / Fortune reporting on internal OpenAI financial documents.",
     sources: [
       {
-        name: "the-decoder",
-        url: "https://the-decoder.com/openai-adds-111-billion-to-its-cash-burn-forecast-as-ai-costs-spiral-beyond-projections/",
+        name: "Fortune (Nov 2025)",
+        url: "https://fortune.com/2025/11/12/openai-cash-burn-rate-annual-losses-2028-profitable-2030-financial-documents/",
       },
+    ],
+  },
+  {
+    ticker: "OAI",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: -25e9,
+    low: -27e9,
+    high: -25e9,
+    quality: "sourced",
+    methodology:
+      "FY2026 cash burn revised to ~$25-27B per OpenAI financial documents reported by Fortune (Nov 2025). Original FY26 burn projection was ~$14B.",
+    sources: [
       {
-        name: "Ed Zitron (wheresyoured.at)",
-        url: "https://www.wheresyoured.at/oai_docs/",
+        name: "Fortune (Nov 2025)",
+        url: "https://fortune.com/2025/11/12/openai-cash-burn-rate-annual-losses-2028-profitable-2030-financial-documents/",
       },
     ],
   },
@@ -854,8 +785,8 @@ const FACTS: Fact[] = [
       "Pre-API-launch. Year-end 2022 ARR was ~$10M; recognized CY2022 revenue est. <$5M.",
     sources: [
       {
-        name: "electroiq stats",
-        url: "https://electroiq.com/stats/anthropic-statistics/",
+        name: "VentureBeat on Anthropic trajectory",
+        url: "https://venturebeat.com/technology/anthropic-says-it-hit-a-30-billion-revenue-run-rate-after-crazy-80x-growth",
       },
     ],
   },
@@ -866,11 +797,11 @@ const FACTS: Fact[] = [
     value: 60e6,
     quality: "estimated",
     methodology:
-      "Reached ~$100M ARR by end of 2023 starting from near-zero in January. Recognized CY ~$60M estimated.",
+      "Reached ~$100M ARR by end of 2023 from near-zero in Jan. Recognized full-year revenue estimated ~$60M.",
     sources: [
       {
-        name: "SaaStr Anthropic trajectory",
-        url: "https://www.saastr.com/anthropic-just-hit-14-billion-in-arr-up-from-1-billion-just-14-months-ago/",
+        name: "VentureBeat on Anthropic growth",
+        url: "https://venturebeat.com/technology/anthropic-says-it-hit-a-30-billion-revenue-run-rate-after-crazy-80x-growth",
       },
     ],
   },
@@ -878,18 +809,16 @@ const FACTS: Fact[] = [
     ticker: "ANTH",
     metric: "ai_revenue",
     fy: 2024,
-    value: 381e6,
+    value: 1.0e9,
+    low: 0.85e9,
+    high: 1.0e9,
     quality: "sourced",
     methodology:
-      "Recognized CY2024 revenue per The Information; $1B ARR by Dec 2024.",
+      "Recognized CY2024 revenue in the $850M-$1B range per The Information; Anthropic exited 2024 at ~$1B ARR.",
     sources: [
       {
-        name: "SaaStr (citing The Information)",
-        url: "https://www.saastr.com/anthropics-4b-arr-the-enterprise-ai-growth-playbook-thats-rewriting-saas-economics/",
-      },
-      {
-        name: "Ed Zitron",
-        url: "https://www.wheresyoured.at/howmuchmoney/",
+        name: "The Information (Feb 2025)",
+        url: "https://www.theinformation.com/briefings/anthropic-projected-to-burn-more-than-2-7-billion-in-cash-this-year",
       },
     ],
   },
@@ -900,22 +829,34 @@ const FACTS: Fact[] = [
     value: 4.5e9,
     quality: "sourced",
     methodology:
-      "Company forecast for CY2025 per The Information ($4.5B revenue, gross of cloud-reseller). $9B ARR by Dec 2025.",
+      "Recognized CY2025 revenue per The Information. Exit ARR was ~$9B at end of 2025.",
     sources: [
       {
         name: "The Information",
         url: "https://www.theinformation.com/articles/anthropic-lowers-profit-margin-projection-revenue-skyrockets",
       },
+    ],
+    note: "Reported gross of cloud-reseller (AWS Bedrock, Google Vertex). Net basis ~20% lower.",
+  },
+  {
+    ticker: "ANTH",
+    metric: "ai_revenue",
+    fy: 2026,
+    value: 30e9,
+    quality: "sourced",
+    methodology:
+      "Annualized revenue run-rate of ~$30B reached in April 2026, reported by Bloomberg. Up from $9B exit ARR at end of 2025.",
+    sources: [
       {
-        name: "Tiger Brokers summary",
-        url: "https://www.itiger.com/news/1113108294",
+        name: "Bloomberg (Apr 2026)",
+        url: "https://www.bloomberg.com/news/articles/2026-04-06/broadcom-confirms-deal-to-ship-google-tpu-chips-to-anthropic",
       },
       {
-        name: "Sacra: Anthropic",
-        url: "https://sacra.com/c/anthropic/",
+        name: "VentureBeat",
+        url: "https://venturebeat.com/technology/anthropic-says-it-hit-a-30-billion-revenue-run-rate-after-crazy-80x-growth",
       },
     ],
-    note: "Revenue is gross of cloud-reseller (AWS Bedrock, Google Vertex). Net basis ~$3.6B.",
+    note: "Annualized run-rate; private company. Reported gross of cloud-reseller; OpenAI internally alleges ~$8B overstatement on gross-vs-net.",
   },
   {
     ticker: "ANTH",
@@ -923,11 +864,12 @@ const FACTS: Fact[] = [
     fy: 2024,
     value: -5.6e9,
     quality: "sourced",
-    methodology: "Operating loss per The Information internal-docs reporting.",
+    methodology:
+      "2024 cash burn ~$5.6B per The Information reporting on Anthropic internal documents.",
     sources: [
       {
-        name: "Ed Zitron howmuchmoney",
-        url: "https://www.wheresyoured.at/howmuchmoney/",
+        name: "The Information (Feb 2025)",
+        url: "https://www.theinformation.com/briefings/anthropic-projected-to-burn-more-than-2-7-billion-in-cash-this-year",
       },
     ],
   },
@@ -936,17 +878,31 @@ const FACTS: Fact[] = [
     metric: "ai_operating_profit",
     fy: 2025,
     value: -3e9,
-    quality: "sourced",
+    quality: "estimated",
     methodology:
-      "Cash burn ~$3B per company internal docs; EBITDA loss forecast was $5.2B but cash burn differs because of deferred GPU commitments not yet recognized as cash out.",
+      "Cash burn ~$3B for 2025 per The Information reporting; lower than 2024 as efficiency gains offset growth investment.",
     sources: [
       {
-        name: "The Information / Tiger Brokers",
-        url: "https://www.itiger.com/news/1113108294",
+        name: "The Information",
+        url: "https://www.theinformation.com/articles/anthropic-lowers-profit-margin-projection-revenue-skyrockets",
       },
+    ],
+    note: "Cash burn vs. accrual operating loss may differ due to deferred GPU commitments.",
+  },
+  {
+    ticker: "ANTH",
+    metric: "ai_operating_profit",
+    fy: 2026,
+    value: -5e9,
+    low: -7e9,
+    high: -3e9,
+    quality: "estimated",
+    methodology:
+      "FY2026 operating loss projected at $3-7B per Anthropic internal financial documents reported by TechCrunch.",
+    sources: [
       {
-        name: "Sacra",
-        url: "https://sacra.com/c/anthropic/",
+        name: "TechCrunch on Anthropic projections",
+        url: "https://techcrunch.com/2025/11/04/anthropic-expects-b2b-demand-to-boost-revenue-to-70b-in-2028-report/",
       },
     ],
   },
@@ -966,6 +922,9 @@ async function main() {
       })
       .onConflictDoNothing();
   }
+
+  // Wipe existing AI economics facts so re-seeding is idempotent.
+  db.delete(schema.aiEconomicsFacts).run();
 
   const now = new Date().toISOString();
   let inserted = 0;

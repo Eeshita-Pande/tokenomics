@@ -17,9 +17,9 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tokenomics — multi-lens AI profitability",
+  title: "Tokenomics — AI economics, footnoted",
   description:
-    "Capex treatments, useful-life sensitivities, and the cost cascade from hyperscalers to public SaaS.",
+    "Year-by-year AI capex, revenue, and operating profit for Amazon, Google, Microsoft, NVIDIA, OpenAI, and Anthropic — every figure linked to its primary source.",
 };
 
 export default function RootLayout({

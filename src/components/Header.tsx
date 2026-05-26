@@ -9,24 +9,13 @@ export function Header() {
             tokenomics
           </span>
           <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
-            multi-lens AI profitability
+            AI economics, footnoted
           </span>
         </Link>
-        <nav className="flex items-center gap-6 text-[13px]">
-          <Link href="/" className="hover:text-[color:var(--accent)]">
-            Companies
-          </Link>
-          <Link href="/compare" className="hover:text-[color:var(--accent)]">
-            Compare
-          </Link>
-          <span className="text-[color:var(--muted)] num">
-            {new Date().toISOString().slice(0, 10)}
-          </span>
-        </nav>
+        <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)] num">
+          {new Date().toISOString().slice(0, 10)}
+        </span>
       </div>
     </header>
   );
 }
-
-const HAIRLINE = "border-color: var(--hairline)";
-void HAIRLINE;
