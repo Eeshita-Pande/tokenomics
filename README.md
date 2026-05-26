@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# tokenomics
 
-## Getting Started
+Year-by-year AI economics for Amazon, Alphabet, Microsoft, NVIDIA, OpenAI, and Anthropic — with every figure traceable to a public source.
 
-First, run the development server:
+A grouped bar chart with four metric views (AI capex, amortized capex, AI revenue, AI operating profit). Hover any bar for the value, data-quality classification, calculation methodology, and clickable source links. A numbered bibliography below the chart enumerates every source for the currently visible view.
+
+## Stack
+
+- Next.js 16 (App Router, Turbopack) on Roboto + Roboto Mono.
+- Drizzle ORM over SQLite locally; Postgres for production.
+- Hand-rolled SVG bar + line charts (no chart library).
+- TypeScript end-to-end.
+
+## Data model
+
+Two parallel datasets:
+
+- `financial_facts` — raw SEC EDGAR XBRL facts, scraped from each filer's 10-K/10-Q. Whole-company and segment-level.
+- `ai_economics_facts` — curated, source-attributed AI-specific facts per company × year × metric, each with `data_quality` ∈ {sourced, calculated, inconsistent, estimated}, a `methodology` field, and a JSON array of `sources` (name + URL).
+
+## Getting started
 
 ```bash
+npm install
+npx drizzle-kit push                  # create the SQLite schema locally
+npx tsx scripts/seed-edgar.ts         # ~1,000 SEC XBRL facts (whole-co)
+npx tsx scripts/seed-segments.ts      # ~250 segment facts (AWS, GCP, NVDA DC)
+npx tsx scripts/seed-ai-economics.ts  # 58 sourced AI economics facts
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`tokenomics.db` is gitignored — it's regenerable from the seed scripts above.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data quality classifications
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Sourced** — single authoritative source (SEC filing, press release, CFO statement).
+- **Calculated** — derived from sourced inputs (e.g. straight-line amortization).
+- **Inconsistent** — sources disagree materially. Range shown low–high.
+- **Estimated** — no primary disclosure; credible third-party estimate.
 
-## Learn More
+## Methodology notes
 
-To learn more about Next.js, take a look at the following resources:
+**AI capex.** Hyperscalers (Amazon, Alphabet, Microsoft): whole-company capex per 10-K cash-flow statement, treated as AI-attributable per MD&A "primarily for technology infrastructure" language. NVIDIA has minimal capex (chip designer, not infrastructure operator). OpenAI/Anthropic carry no GPU PP&E; their compute is opex via multi-year cloud commitments (Stargate, Project Rainier, Google TPU deals).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**AI revenue.** Cloud segment for hyperscalers (AWS, Google Cloud, Intelligent Cloud); Data Center segment for NVIDIA; total recognized revenue for OpenAI/Anthropic (The Information internal-docs reporting + Sacra/Epoch AI).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**AI operating profit.** Cloud segment operating income for hyperscalers; Compute & Networking segment income for NVIDIA (closest Data Center proxy); total operating loss for OpenAI/Anthropic.
 
-## Deploy on Vercel
+Anthropic revenue is reported gross of cloud-reseller (AWS Bedrock, Google Vertex). Net basis is ~20% lower.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Research surface, not investment advice.
