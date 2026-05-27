@@ -24,7 +24,7 @@ function fmtMoney(v: number) {
 }
 
 export function MetricDetailView({ metric, facts }: Props) {
-  const [usefulLife, setUsefulLife] = useState(4);
+  const [usefulLife, setUsefulLife] = useState(3);
 
   const visibleFacts = useMemo(() => {
     if (metric === "ai_capex_amortized") {

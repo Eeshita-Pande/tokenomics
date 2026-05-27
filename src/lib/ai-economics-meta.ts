@@ -89,6 +89,40 @@ export const SLUG_TO_METRIC: Record<string, Metric> = Object.fromEntries(
   Object.values(METRIC_META).map((m) => [m.slug, m.metric]),
 );
 
+// Derived views are charts on the home page that don't correspond to a single
+// raw metric — they combine or compute from multiple Metric facts. Sources and
+// methodology on their detail pages are stacked from `sourceMetrics`.
+export type DerivedView = {
+  slug: string;
+  kicker: string;
+  title: string;
+  description: string;
+  sourceMetrics: Metric[];
+};
+
+export const DERIVED_VIEWS: Record<string, DerivedView> = {
+  "ai-revenue-and-profit": {
+    slug: "ai-revenue-and-profit",
+    // USER TO WRITE — placeholder copy below; safe to overwrite.
+    kicker: "Revenue & operating profit",
+    title: "AI revenue and operating profit",
+    description:
+      "AI-only revenue per year, with operating profit shown as a dashed cost overlay. When the dashed bar fits inside the solid revenue bar, the gap to the right is profit. When the dashed bar crosses zero into the negative axis, the company is spending more on AI than it's earning — by the amount it crosses.",
+    sourceMetrics: ["ai_revenue", "ai_operating_profit"],
+  },
+  "ai-cumulative-net": {
+    slug: "ai-cumulative-net",
+    // USER TO WRITE — placeholder copy below; safe to overwrite.
+    kicker: "Cumulative net",
+    title: "AI operating profit minus AI capex (2022–2026)",
+    description:
+      "For each company: cumulative AI operating profit across 2022–2026, minus cumulative AI capex across the same window. A single number per company showing where the AI buildout sits relative to the AI revenue it has booked so far. Hyperscalers run deeply negative because capex has outpaced AI-segment profit; the frontier labs run negative because of operating losses.",
+    sourceMetrics: ["ai_operating_profit", "ai_capex"],
+  },
+};
+
+export const DERIVED_SLUGS = Object.keys(DERIVED_VIEWS);
+
 export const SHARED_NOTES = {
   annualization:
     "Calendar-year filers (Amazon, Google) are annualized from Q1 2026 × 4. Microsoft (fiscal year ending June 30) uses FY26 Q3 × 4. NVIDIA FY26 ended Jan 25, 2026 — those are full-year actuals, not annualized. OpenAI 2026 uses the company's own internal full-year projection ($30B), cross-checked against Q1 2026 actual of $5.7B. Anthropic 2026 uses Q1 actual ($4.8B) + Q2 projected ($10.9B) + Q2 × 2 estimate for H2 = $37.5B.",

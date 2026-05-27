@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { BarDatum } from "@/components/chart/BarChart";
 import { Logo } from "@/components/Logo";
 
@@ -56,10 +57,23 @@ export function SnapshotChart({
   groups,
   serieses,
   height = 150,
-  width = 520,
+  width: widthFallback = 520,
   yFormat = defaultFmt,
 }: Props) {
-  const innerW = width - PAD.left - PAD.right;
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(widthFallback);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const el = wrapRef.current;
+    const ro = new ResizeObserver(() =>
+      setWidth(el.clientWidth || widthFallback),
+    );
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [widthFallback]);
+
+  const innerW = Math.max(width - PAD.left - PAD.right, 50);
   const innerH = height - PAD.top - PAD.bottom;
 
   const values = data
@@ -91,155 +105,156 @@ export function SnapshotChart({
   }
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      width="100%"
-      height="100%"
-      preserveAspectRatio="none"
-      style={{ display: "block" }}
-    >
-      {yTicks.map((t) => (
-        <g key={t}>
-          <line
-            x1={PAD.left}
-            x2={PAD.left + innerW}
-            y1={yAt(t)}
-            y2={yAt(t)}
-            stroke="var(--hairline)"
-            strokeDasharray={t === 0 ? "0" : "2,3"}
-          />
-          <text
-            x={PAD.left - 4}
-            y={yAt(t)}
-            textAnchor="end"
-            dominantBaseline="middle"
-            fontSize={9}
-            fontFamily="var(--font-roboto-mono), monospace"
-            fill="var(--muted)"
-          >
-            {yFormat(t)}
-          </text>
-        </g>
-      ))}
+    <div ref={wrapRef} className="w-full" style={{ height }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
+        height={height}
+        style={{ display: "block" }}
+      >
+        {yTicks.map((t) => (
+          <g key={t}>
+            <line
+              x1={PAD.left}
+              x2={PAD.left + innerW}
+              y1={yAt(t)}
+              y2={yAt(t)}
+              stroke="var(--hairline)"
+              strokeDasharray={t === 0 ? "0" : "2,3"}
+            />
+            <text
+              x={PAD.left - 4}
+              y={yAt(t)}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fontSize={9}
+              fontFamily="var(--font-roboto-mono), monospace"
+              fill="var(--muted)"
+            >
+              {yFormat(t)}
+            </text>
+          </g>
+        ))}
 
-      <line
-        x1={PAD.left}
-        x2={PAD.left + innerW}
-        y1={PAD.top + innerH}
-        y2={PAD.top + innerH}
-        stroke="var(--hairline-strong)"
-      />
-
-      {yMin < 0 && yMax > 0 && (
         <line
           x1={PAD.left}
           x2={PAD.left + innerW}
-          y1={zeroY}
-          y2={zeroY}
-          stroke="var(--foreground)"
-          strokeWidth={0.75}
+          y1={PAD.top + innerH}
+          y2={PAD.top + innerH}
+          stroke="var(--hairline-strong)"
         />
-      )}
 
-      {groups.map((g, gi) => (
-        <text
-          key={g}
-          x={xGroupStart(gi) + (groupW - groupPadding) / 2}
-          y={PAD.top + innerH + 14}
-          textAnchor="middle"
-          fontSize={10}
-          fontFamily="var(--font-roboto-mono), monospace"
-          fill="var(--muted)"
-        >
-          {g}
-        </text>
-      ))}
+        {yMin < 0 && yMax > 0 && (
+          <line
+            x1={PAD.left}
+            x2={PAD.left + innerW}
+            y1={zeroY}
+            y2={zeroY}
+            stroke="var(--foreground)"
+            strokeWidth={0.75}
+          />
+        )}
 
-      {groups.map((g, gi) =>
-        serieses.map((s, si) => {
-          const d = data.find((dx) => dx.group === g && dx.series === s.id);
-          const x = xGroupStart(gi) + si * (barW + 1);
-          const value = d?.value ?? null;
-          const marker =
-            d?.marker !== null &&
-            d?.marker !== undefined &&
-            Number.isFinite(d?.marker)
-              ? (d.marker as number)
-              : null;
-          if (
-            (value === null || !Number.isFinite(value)) &&
-            marker === null
-          ) {
-            return null;
-          }
-          const drawnValue = value !== null && Number.isFinite(value) ? value : 0;
-          const y = drawnValue >= 0 ? yAt(drawnValue) : zeroY;
-          const h = Math.abs(yAt(drawnValue) - zeroY);
-          const cx = x + barW / 2;
-          const half = Math.max(Math.min(barW * 0.85, 4), 2.5);
-          return (
-            <g key={`${g}-${s.id}`}>
-              {value !== null && Number.isFinite(value) && (
-                <rect
-                  x={x}
-                  y={y}
-                  width={barW}
-                  height={Math.max(h, 0.5)}
-                  fill={s.color}
-                  opacity={0.92}
-                />
-              )}
-              {marker !== null && marker > 0 && (
-                <polygon
-                  points={`${cx},${yAt(marker) - half} ${cx + half},${yAt(marker)} ${cx},${yAt(marker) + half} ${cx - half},${yAt(marker)}`}
-                  fill="var(--accent)"
-                  stroke="#ffffff"
-                  strokeWidth={0.6}
-                />
-              )}
-            </g>
-          );
-        }),
-      )}
+        {groups.map((g, gi) => (
+          <text
+            key={g}
+            x={xGroupStart(gi) + (groupW - groupPadding) / 2}
+            y={PAD.top + innerH + 14}
+            textAnchor="middle"
+            fontSize={10}
+            fontFamily="var(--font-roboto-mono), monospace"
+            fill="var(--muted)"
+          >
+            {g}
+          </text>
+        ))}
 
-      {(() => {
-        const lastGi = groups.length - 1;
-        if (lastGi < 0) return null;
-        const g = groups[lastGi];
-        return serieses.map((s, si) => {
-          const d = data.find((dx) => dx.group === g && dx.series === s.id);
-          const x = xGroupStart(lastGi) + si * (barW + 1);
-          const value = d?.value ?? null;
-          const barCenterX = x + barW / 2;
-          const topY =
-            value !== null && Number.isFinite(value) && value > 0
-              ? yAt(value)
-              : zeroY;
-          const logoY = Math.max(topY - LOGO_SIZE - 1, 0);
-          return (
-            <foreignObject
-              key={`logo-${s.id}`}
-              x={barCenterX - LOGO_SIZE / 2}
-              y={logoY}
-              width={LOGO_SIZE}
-              height={LOGO_SIZE}
-              pointerEvents="none"
-            >
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+        {groups.map((g, gi) =>
+          serieses.map((s, si) => {
+            const d = data.find((dx) => dx.group === g && dx.series === s.id);
+            const x = xGroupStart(gi) + si * (barW + 1);
+            const value = d?.value ?? null;
+            const marker =
+              d?.marker !== null &&
+              d?.marker !== undefined &&
+              Number.isFinite(d?.marker)
+                ? (d.marker as number)
+                : null;
+            if (
+              (value === null || !Number.isFinite(value)) &&
+              marker === null
+            ) {
+              return null;
+            }
+            const drawnValue = value !== null && Number.isFinite(value) ? value : 0;
+            const y = drawnValue >= 0 ? yAt(drawnValue) : zeroY;
+            const h = Math.abs(yAt(drawnValue) - zeroY);
+            const cx = x + barW / 2;
+            const half = Math.max(Math.min(barW * 0.85, 4), 2.5);
+            return (
+              <g key={`${g}-${s.id}`}>
+                {value !== null && Number.isFinite(value) && (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={barW}
+                    height={Math.max(h, 0.5)}
+                    fill={s.color}
+                    opacity={0.92}
+                  />
+                )}
+                {marker !== null && marker > 0 && (
+                  <polygon
+                    points={`${cx},${yAt(marker) - half} ${cx + half},${yAt(marker)} ${cx},${yAt(marker) + half} ${cx - half},${yAt(marker)}`}
+                    fill="var(--accent)"
+                    stroke="#ffffff"
+                    strokeWidth={0.6}
+                  />
+                )}
+              </g>
+            );
+          }),
+        )}
+
+        {(() => {
+          const lastGi = groups.length - 1;
+          if (lastGi < 0) return null;
+          const g = groups[lastGi];
+          return serieses.map((s, si) => {
+            const d = data.find((dx) => dx.group === g && dx.series === s.id);
+            const x = xGroupStart(lastGi) + si * (barW + 1);
+            const value = d?.value ?? null;
+            const barCenterX = x + barW / 2;
+            const topY =
+              value !== null && Number.isFinite(value) && value > 0
+                ? yAt(value)
+                : zeroY;
+            const logoY = Math.max(topY - LOGO_SIZE - 1, 0);
+            return (
+              <foreignObject
+                key={`logo-${s.id}`}
+                x={barCenterX - LOGO_SIZE / 2}
+                y={logoY}
+                width={LOGO_SIZE}
+                height={LOGO_SIZE}
+                pointerEvents="none"
               >
-                <Logo ticker={s.id} size={LOGO_SIZE} />
-              </div>
-            </foreignObject>
-          );
-        });
-      })()}
-    </svg>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Logo ticker={s.id} size={LOGO_SIZE} />
+                </div>
+              </foreignObject>
+            );
+          });
+        })()}
+      </svg>
+    </div>
   );
 }
