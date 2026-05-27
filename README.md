@@ -41,4 +41,4 @@ Anthropic revenue is reported gross of cloud-reseller (AWS Bedrock, Google Verte
 
 ## Status
 
-Research surface, not investment advice.
+Research, not investment advice.

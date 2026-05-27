@@ -61,3 +61,17 @@ a {
 a:hover {
   color: var(--accent);
 }
+
+a.card-link:hover,
+a.card-link:hover * {
+  color: inherit;
+}
+
+a.source-link {
+  color: #1a56db;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a.source-link:hover {
+  color: #1e40af;
+}

@@ -626,33 +626,35 @@ const FACTS: Fact[] = [
     ticker: "OAI",
     metric: "ai_revenue",
     fy: 2023,
-    value: 1.6e9,
-    low: 1.3e9,
-    high: 2.0e9,
-    quality: "inconsistent",
+    value: 1.0e9,
+    quality: "sourced",
     methodology:
-      "Annualized run-rate at year-end 2023 was ~$1.6B per The Information; full-year recognized revenue tracked lower (~$1.3B). CFO references to ~$2B reflect run-rate exit.",
+      "Full-year 2023 revenue per The Information's \"OpenAI's Revenue Ambitions\" chart (Mar 26, 2026).",
     sources: [
       {
-        name: "The Information / Reuters (Dec 2023)",
-        url: "https://www.marketscreener.com/quote/stock/MICROSOFT-CORPORATION-4835/news/OpenAI-annualized-revenue-tops-1-6-billion-The-Information-45653315/",
+        name: "The Information (Mar 4, 2026) — OpenAI Tops $25B Annualized",
+        url: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap",
+        date: "2026-03-04",
       },
     ],
+    note: "Full-year actual. The earlier $1.6B figure was the end-2023 annualized run-rate (Dec 2023), not full-year revenue.",
   },
   {
     ticker: "OAI",
     metric: "ai_revenue",
     fy: 2024,
-    value: 3.7e9,
+    value: 4.0e9,
     quality: "sourced",
     methodology:
-      "Recognized CY2024 revenue per The New York Times (citing OpenAI financial documents), corroborated by CNBC.",
+      "Full-year 2024 revenue per The Information's \"OpenAI's Revenue Ambitions\" chart (Mar 26, 2026).",
     sources: [
       {
-        name: "CNBC (citing NYT-obtained docs)",
-        url: "https://www.cnbc.com/2024/09/27/openai-sees-5-billion-loss-this-year-on-3point7-billion-in-revenue.html",
+        name: "The Information (Mar 4, 2026)",
+        url: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap",
+        date: "2026-03-04",
       },
     ],
+    note: "Full-year actual. Supersedes Sep 2024 projection of $3.7B (CNBC citing NYT-obtained docs).",
   },
   {
     ticker: "OAI",
@@ -677,21 +679,28 @@ const FACTS: Fact[] = [
     ticker: "OAI",
     metric: "ai_revenue",
     fy: 2026,
-    value: 25.0e9,
+    value: 30.0e9,
     quality: "sourced",
     methodology:
-      "Annualized revenue run-rate of ~$25B as of Feb 2026, reported by The Information and confirmed by Reuters. Up from ~$20B exit ARR at end of 2025.",
+      "OpenAI's internal full-year 2026 revenue projection of $30B, per The Information. Q1 2026 actual was $5.7B, consistent with the projection.",
     sources: [
       {
-        name: "The Information (Mar 2026)",
+        name: "The Information (Mar 4, 2026) — OpenAI's Revenue Ambitions",
         url: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap",
+        date: "2026-03-04",
       },
       {
-        name: "Reuters / TradingView mirror",
-        url: "https://www.tradingview.com/news/reuters.com,2026:newsml_L4N3ZT0E1:0-openai-tops-25-billion-in-annualized-revenue-the-information-reports/",
+        name: "The Information (May 26, 2026) — Anthropic Likely 35% More Revenue",
+        url: "https://www.theinformation.com/articles/anthropic-is-likely-generating-at-least-35-more-revenue-than-openai",
+        date: "2026-05-26",
+      },
+      {
+        name: "The Information (May 21, 2026) — Q1 $5.7B",
+        url: "https://www.theinformation.com/articles/openai-generated-nearly-6-billion-in-revenue-in-first-quarter-boosted-by-codex",
+        date: "2026-05-21",
       },
     ],
-    note: "OpenAI is private; figure is an annualized run-rate disclosed via press leaks.",
+    note: "Company internal projection. Q1 actual: $5.7B. Annualized run-rate: $25B (Feb), $30B (Mar), ~$33B (May 2026).",
   },
   {
     ticker: "OAI",
@@ -760,18 +769,23 @@ const FACTS: Fact[] = [
     ticker: "OAI",
     metric: "ai_operating_profit",
     fy: 2026,
-    value: -25e9,
-    low: -27e9,
-    high: -25e9,
-    quality: "sourced",
+    value: -36.6e9,
+    quality: "calculated",
     methodology:
-      "FY2026 cash burn revised to ~$25-27B per OpenAI financial documents reported by Fortune (Nov 2025). Original FY26 burn projection was ~$14B.",
+      "Q1 2026 adjusted operating margin of -122% (per The Information) applied to full-year 2026 revenue of $30B = -$36.6B adjusted operating loss (excludes SBC, includes training costs).",
     sources: [
       {
-        name: "Fortune (Nov 2025)",
-        url: "https://fortune.com/2025/11/12/openai-cash-burn-rate-annual-losses-2028-profitable-2030-financial-documents/",
+        name: "The Information (May 21, 2026) — OpenAI Q1 $5.7B / -122% margin",
+        url: "https://www.theinformation.com/articles/openai-generated-nearly-6-billion-in-revenue-in-first-quarter-boosted-by-codex",
+        date: "2026-05-21",
+      },
+      {
+        name: "The Information (May 26, 2026) — Q1 lost at least $7B",
+        url: "https://www.theinformation.com/articles/anthropic-is-likely-generating-at-least-35-more-revenue-than-openai",
+        date: "2026-05-26",
       },
     ],
+    note: "Adjusted operating loss (excl. SBC, incl. training costs). Q1 2026 actual: ~-$7B on $5.7B revenue. Methodology: hold Q1 margin constant. Cash burn projection separately reported at $25B.",
   },
 
   // ============ ANTHROPIC (private; CY) ============
@@ -842,21 +856,28 @@ const FACTS: Fact[] = [
     ticker: "ANTH",
     metric: "ai_revenue",
     fy: 2026,
-    value: 30e9,
-    quality: "sourced",
+    value: 37.5e9,
+    quality: "calculated",
     methodology:
-      "Annualized revenue run-rate of ~$30B reached in April 2026, reported by Bloomberg. Up from $9B exit ARR at end of 2025.",
+      "Q1 actual $4.8B + Q2 projected $10.9B + Q2 × 2 estimate for H2 ($21.8B) = $37.5B full-year 2026.",
     sources: [
       {
-        name: "Bloomberg (Apr 2026)",
-        url: "https://www.bloomberg.com/news/articles/2026-04-06/broadcom-confirms-deal-to-ship-google-tpu-chips-to-anthropic",
+        name: "WSJ (May 20, 2026) — Anthropic First Profitable Quarter",
+        url: "https://www.wsj.com/tech/ai/mind-blowing-growth-is-about-to-propel-anthropic-into-its-first-profitable-quarter-7edbf2f4",
+        date: "2026-05-20",
       },
       {
-        name: "VentureBeat",
-        url: "https://venturebeat.com/technology/anthropic-says-it-hit-a-30-billion-revenue-run-rate-after-crazy-80x-growth",
+        name: "The Information (May 21, 2026)",
+        url: "https://www.theinformation.com/articles/openai-generated-nearly-6-billion-in-revenue-in-first-quarter-boosted-by-codex",
+        date: "2026-05-21",
+      },
+      {
+        name: "The Information (May 26, 2026)",
+        url: "https://www.theinformation.com/articles/anthropic-is-likely-generating-at-least-35-more-revenue-than-openai",
+        date: "2026-05-26",
       },
     ],
-    note: "Annualized run-rate; private company. Reported gross of cloud-reseller; OpenAI internally alleges ~$8B overstatement on gross-vs-net.",
+    note: "Reported gross of cloud-reseller (AWS Bedrock, Google Vertex). Annualized run-rate reached ~$45B in mid-May 2026.",
   },
   {
     ticker: "ANTH",
@@ -893,18 +914,30 @@ const FACTS: Fact[] = [
     ticker: "ANTH",
     metric: "ai_operating_profit",
     fy: 2026,
-    value: -5e9,
-    low: -7e9,
-    high: -3e9,
-    quality: "estimated",
+    value: 0.9e9,
+    low: -2.0e9,
+    high: 1.9e9,
+    quality: "calculated",
     methodology:
-      "FY2026 operating loss projected at $3-7B per Anthropic internal financial documents reported by TechCrunch.",
+      "Derivation from H1 2026 numbers only: Q1 actual op loss ~-$0.75B (read off WSJ May 20, 2026 chart \"Anthropic's operating income, by segment\") + Q2 projected op profit +$0.559B (stated, WSJ May 20) + H2 estimate at Q2 × 2 = +$1.118B → full-year ≈ +$0.9B adjusted operating income (excludes SBC, includes training costs).",
     sources: [
       {
-        name: "TechCrunch on Anthropic projections",
-        url: "https://techcrunch.com/2025/11/04/anthropic-expects-b2b-demand-to-boost-revenue-to-70b-in-2028-report/",
+        name: "WSJ (May 20, 2026) — Anthropic First Profitable Quarter",
+        url: "https://www.wsj.com/tech/ai/mind-blowing-growth-is-about-to-propel-anthropic-into-its-first-profitable-quarter-7edbf2f4",
+        date: "2026-05-20",
+      },
+      {
+        name: "The Information (May 21, 2026)",
+        url: "https://www.theinformation.com/articles/openai-generated-nearly-6-billion-in-revenue-in-first-quarter-boosted-by-codex",
+        date: "2026-05-21",
+      },
+      {
+        name: "The Information (May 26, 2026)",
+        url: "https://www.theinformation.com/articles/anthropic-is-likely-generating-at-least-35-more-revenue-than-openai",
+        date: "2026-05-26",
       },
     ],
+    note: "Derivation from H1 numbers only — not a company-disclosed full-year figure. Q2 marks Anthropic's first projected profitable quarter (+$559M / ~5% margin). Anthropic has signaled it may ramp server spend in H2 to keep up with revenue growth, which could push the full year back into negative territory. Range reflects this: low -$2B (H2 server spend ramps, margin reverts) to high +$1.9B (Q2 margin holds across full year).",
   },
 ];
 

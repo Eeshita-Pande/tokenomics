@@ -25,6 +25,18 @@ type Props = {
   height?: number;
 };
 
+function barLabel(v: number): string {
+  if (!Number.isFinite(v)) return "";
+  const abs = Math.abs(v);
+  const wrap = (s: string) => (v < 0 ? `(${s})` : s);
+  if (abs >= 1e10) return wrap(`$${Math.round(abs / 1e9)}B`);
+  if (abs >= 1e9) return wrap(`$${(abs / 1e9).toFixed(1)}B`);
+  if (abs >= 1e8) return wrap(`$${Math.round(abs / 1e6)}M`);
+  if (abs >= 1e6) return wrap(`$${(abs / 1e6).toFixed(0)}M`);
+  if (abs === 0) return "$0";
+  return "";
+}
+
 const PAD = { top: 44, right: 24, bottom: 56, left: 70 };
 
 function niceStep(rough: number): number {
@@ -61,6 +73,7 @@ export function BarChart({
   height = 460,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [width, setWidth] = useState(1000);
   const [hover, setHover] = useState<BarDatum | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(
@@ -75,6 +88,28 @@ export function BarChart({
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    };
+  }, []);
+
+  const cancelDismiss = () => {
+    if (dismissTimer.current) {
+      clearTimeout(dismissTimer.current);
+      dismissTimer.current = null;
+    }
+  };
+
+  const scheduleDismiss = () => {
+    cancelDismiss();
+    dismissTimer.current = setTimeout(() => {
+      setHover(null);
+      setHoverPos(null);
+      dismissTimer.current = null;
+    }, 160);
+  };
+
   const innerW = Math.max(width - PAD.left - PAD.right, 100);
   const innerH = height - PAD.top - PAD.bottom;
 
@@ -87,7 +122,9 @@ export function BarChart({
   const groupPadding = 14;
   const barAreaW = groupW - groupPadding;
   const barW = Math.max(barAreaW / serieses.length - 2, 6);
-  const logoSize = Math.min(Math.max(barW + 4, 14), 22);
+  const barPitch = barW + 2;
+  const logoSize = Math.min(Math.max(barPitch - 1, 10), 22);
+  const outsideFontSize = barPitch >= 22 ? 9 : barPitch >= 14 ? 8 : 7;
 
   const xGroupStart = (gi: number) => PAD.left + gi * groupW + groupPadding / 2;
   const yAt = (v: number) =>
@@ -101,10 +138,38 @@ export function BarChart({
 
   const zeroY = yAt(0);
 
+  const staggerStep = logoSize + outsideFontSize + 4;
+  const staggerByCell = new Map<string, number>();
+  for (const g of groups) {
+    let prevSign: "pos" | "neg" | null = null;
+    let prevRow = 0;
+    for (const s of serieses) {
+      const d = data.find((dx) => dx.group === g && dx.series === s.id);
+      const v = d?.value ?? null;
+      if (v === null || !Number.isFinite(v) || !d) {
+        prevSign = null;
+        continue;
+      }
+      const h = Math.abs(yAt(v) - zeroY);
+      const fitsInside = h >= 18 && barW >= 18;
+      if (fitsInside) {
+        prevSign = null;
+        continue;
+      }
+      const sign: "pos" | "neg" = v < 0 ? "neg" : "pos";
+      let row = 0;
+      if (prevSign === sign) row = 1 - prevRow;
+      staggerByCell.set(`${g}|${s.id}`, row);
+      prevSign = sign;
+      prevRow = row;
+    }
+  }
+
   const handleEnter = (
     e: React.MouseEvent<SVGRectElement | SVGGElement>,
     d: BarDatum,
   ) => {
+    cancelDismiss();
     setHover(d);
     const wrap = wrapRef.current?.getBoundingClientRect();
     if (!wrap) return;
@@ -112,8 +177,7 @@ export function BarChart({
   };
 
   const handleLeave = () => {
-    setHover(null);
-    setHoverPos(null);
+    scheduleDismiss();
   };
 
   return (
@@ -151,7 +215,7 @@ export function BarChart({
               dominantBaseline="middle"
               fontSize={11}
               fontFamily="var(--font-roboto-mono), monospace"
-              fill="var(--muted)"
+              fill={t < 0 ? "var(--negative)" : "var(--muted)"}
             >
               {yFormat(t)}
             </text>
@@ -205,7 +269,7 @@ export function BarChart({
                 <g key={`${g}-${s.id}-empty`}>
                   <foreignObject
                     x={barCenterX - logoSize / 2}
-                    y={PAD.top - logoSize + 2}
+                    y={zeroY - logoSize - 4}
                     width={logoSize}
                     height={logoSize}
                     pointerEvents="none"
@@ -237,10 +301,15 @@ export function BarChart({
             const y = value >= 0 ? yAt(value) : zeroY;
             const h = Math.abs(yAt(value) - zeroY);
             const isHover = hover?.group === g && hover?.series === s.id;
+            const staggerRow = staggerByCell.get(`${g}|${s.id}`) ?? 0;
+            const staggerOffset = staggerRow * staggerStep;
             const logoY =
               value >= 0
-                ? Math.max(y - logoSize - 4, PAD.top - logoSize - 2)
-                : y + h + 4;
+                ? Math.max(
+                    y - logoSize - 4 - staggerOffset,
+                    PAD.top - logoSize - 2,
+                  )
+                : y + h + 4 + staggerOffset;
             return (
               <g
                 key={`${g}-${s.id}`}
@@ -264,6 +333,48 @@ export function BarChart({
                   fill={s.color}
                   opacity={isHover ? 1 : hover ? 0.32 : 0.92}
                 />
+                {(() => {
+                  const fitsInside = h >= 18 && barW >= 18;
+                  if (fitsInside) {
+                    return (
+                      <text
+                        x={barCenterX}
+                        y={y + 10}
+                        textAnchor="middle"
+                        fontSize={8}
+                        fontFamily="var(--font-roboto-mono), monospace"
+                        fontWeight={500}
+                        fill="#ffffff"
+                        pointerEvents="none"
+                        opacity={hover && !isHover ? 0.4 : 1}
+                      >
+                        {barLabel(value)}
+                      </text>
+                    );
+                  }
+                  const outsideY =
+                    value >= 0 ? logoY - 3 : logoY + logoSize + 3;
+                  const outsideBaseline =
+                    value >= 0 ? "auto" : "hanging";
+                  return (
+                    <text
+                      x={barCenterX}
+                      y={outsideY}
+                      textAnchor="middle"
+                      dominantBaseline={outsideBaseline}
+                      fontSize={outsideFontSize}
+                      fontFamily="var(--font-roboto-mono), monospace"
+                      fontWeight={500}
+                      fill={
+                        value < 0 ? "var(--negative)" : "var(--foreground)"
+                      }
+                      pointerEvents="none"
+                      opacity={hover && !isHover ? 0.4 : 1}
+                    >
+                      {barLabel(value)}
+                    </text>
+                  );
+                })()}
                 <foreignObject
                   x={barCenterX - logoSize / 2}
                   y={logoY}
@@ -292,7 +403,9 @@ export function BarChart({
 
       {hover && hoverPos && (
         <div
-          className="pointer-events-none absolute bg-white border hairline-strong shadow-md p-3 text-[12px] leading-[1.5]"
+          className="absolute bg-white border hairline-strong shadow-md p-3 text-[12px] leading-[1.5]"
+          onMouseEnter={cancelDismiss}
+          onMouseLeave={scheduleDismiss}
           style={{
             left: Math.min(hoverPos.x + 14, width - 320),
             top: Math.min(hoverPos.y + 8, height - 60),
@@ -305,10 +418,34 @@ export function BarChart({
             {hover.label}
           </div>
           <div className="num text-[18px] mt-0.5 font-medium">
-            {hover.value !== null ? yFormat(hover.value) : "—"}
+            <span
+              style={
+                hover.value !== null && hover.value < 0
+                  ? { color: "var(--negative)" }
+                  : undefined
+              }
+            >
+              {hover.value !== null ? yFormat(hover.value) : "—"}
+            </span>
             {hover.low !== null && hover.high !== null && (
               <span className="text-[12px] text-[color:var(--muted)] ml-2">
-                ({yFormat(hover.low)} – {yFormat(hover.high)})
+                (
+                <span
+                  style={
+                    hover.low < 0 ? { color: "var(--negative)" } : undefined
+                  }
+                >
+                  {yFormat(hover.low)}
+                </span>
+                {" – "}
+                <span
+                  style={
+                    hover.high < 0 ? { color: "var(--negative)" } : undefined
+                  }
+                >
+                  {yFormat(hover.high)}
+                </span>
+                )
               </span>
             )}
           </div>
@@ -329,7 +466,7 @@ export function BarChart({
                       href={s.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[color:var(--accent)] underline pointer-events-auto"
+                      className="source-link"
                     >
                       {s.name}
                     </a>

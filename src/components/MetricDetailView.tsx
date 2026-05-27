@@ -5,7 +5,6 @@ import { BarChart, type BarDatum } from "@/components/chart/BarChart";
 import {
   COMPANY_LABEL,
   COMPANY_ORDER,
-  METRIC_LABELS,
   YEARS,
   buildAmortizedFromCapex,
   type EnrichedFact,
@@ -13,37 +12,29 @@ import {
 } from "@/lib/ai-economics";
 import { COMPANY_COLORS } from "@/components/chart/palette";
 
-type Props = { facts: EnrichedFact[] };
+type Props = { metric: Metric; facts: EnrichedFact[] };
 
 function fmtMoney(v: number) {
   if (!Number.isFinite(v)) return "—";
   const abs = Math.abs(v);
-  if (abs >= 1e9) return `${v < 0 ? "-" : ""}$${(Math.abs(v) / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${v < 0 ? "-" : ""}$${(Math.abs(v) / 1e6).toFixed(0)}M`;
-  return `$${v.toFixed(0)}`;
+  const wrap = (s: string) => (v < 0 ? `(${s})` : s);
+  if (abs >= 1e9) return wrap(`$${(abs / 1e9).toFixed(1)}B`);
+  if (abs >= 1e6) return wrap(`$${(abs / 1e6).toFixed(0)}M`);
+  return wrap(`$${abs.toFixed(0)}`);
 }
 
-const METRICS: Metric[] = [
-  "ai_capex",
-  "ai_capex_amortized",
-  "ai_revenue",
-  "ai_operating_profit",
-];
-
-export function AiEconomicsBoard({ facts }: Props) {
-  const [metric, setMetric] = useState<Metric>("ai_revenue");
+export function MetricDetailView({ metric, facts }: Props) {
   const [usefulLife, setUsefulLife] = useState(5);
 
-  const enrichedFacts = useMemo(() => {
-    const capexFacts = facts.filter((f) => f.metric === "ai_capex");
-    const amortized = buildAmortizedFromCapex(capexFacts, usefulLife);
-    return [...facts, ...amortized];
-  }, [facts, usefulLife]);
-
-  const visibleFacts = useMemo(
-    () => enrichedFacts.filter((f) => f.metric === metric),
-    [enrichedFacts, metric],
-  );
+  const visibleFacts = useMemo(() => {
+    if (metric === "ai_capex_amortized") {
+      return buildAmortizedFromCapex(
+        facts.filter((f) => f.metric === "ai_capex"),
+        usefulLife,
+      );
+    }
+    return facts.filter((f) => f.metric === metric);
+  }, [facts, metric, usefulLife]);
 
   const dataByCell = useMemo(() => {
     const map = new Map<string, EnrichedFact>();
@@ -76,26 +67,6 @@ export function AiEconomicsBoard({ facts }: Props) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        {METRICS.map((m) => {
-          const active = m === metric;
-          return (
-            <button
-              key={m}
-              onClick={() => setMetric(m)}
-              className="px-4 py-2 text-[13px] border hairline-strong transition-colors"
-              style={{
-                background: active ? "var(--foreground)" : "white",
-                color: active ? "white" : "var(--foreground)",
-                fontWeight: active ? 500 : 400,
-              }}
-            >
-              {METRIC_LABELS[m]}
-            </button>
-          );
-        })}
-      </div>
-
       {showAmortizedSlider && (
         <div className="flex items-center gap-3 mb-4 text-[13px]">
           <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">

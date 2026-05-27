@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatLastUpdated } from "@/lib/format";
 
 export function Header() {
   return (
@@ -6,14 +7,14 @@ export function Header() {
       <div className="mx-auto max-w-[1200px] px-6 py-4 flex items-baseline justify-between">
         <Link href="/" className="flex items-baseline gap-3">
           <span className="text-[20px] font-bold tracking-tight">
-            tokenomics
+            Tokenomics
           </span>
-          <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+          {/* <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
             AI economics, footnoted
-          </span>
+          </span> */}
         </Link>
-        <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)] num">
-          {new Date().toISOString().slice(0, 10)}
+        <span className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">
+          {formatLastUpdated()}
         </span>
       </div>
     </header>
