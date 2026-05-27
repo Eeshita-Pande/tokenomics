@@ -15,6 +15,14 @@ export type BarDatum = {
   methodology: string;
   sources: AiSource[];
   note: string | null;
+  marker?: number | null;
+  markerLabel?: string;
+  markerMethodology?: string;
+  markerSources?: AiSource[];
+  // Stable y-domain hint: the largest the marker can be across the slider's
+  // full range. Used for axis sizing only, not drawn. Lets the y-axis stay
+  // pinned as the user moves the slider.
+  markerDomainMax?: number | null;
 };
 
 type Props = {
@@ -116,7 +124,16 @@ export function BarChart({
   const values = data
     .filter((d) => d.value !== null && Number.isFinite(d.value))
     .map((d) => d.value as number);
-  const [yMin, yMax] = niceDomain(values);
+  // For y-domain, prefer the stable hint (markerDomainMax = marker at slider
+  // minimum) so axis doesn't rescale as the slider moves. Fall back to the
+  // live marker if no hint is provided.
+  const markerDomainValues = data
+    .filter((d) => {
+      const hint = d.markerDomainMax ?? d.marker;
+      return hint !== null && hint !== undefined && Number.isFinite(hint);
+    })
+    .map((d) => (d.markerDomainMax ?? d.marker) as number);
+  const [yMin, yMax] = niceDomain([...values, ...markerDomainValues]);
 
   const groupW = innerW / groups.length;
   const groupPadding = 14;
@@ -333,6 +350,29 @@ export function BarChart({
                   fill={s.color}
                   opacity={isHover ? 1 : hover ? 0.32 : 0.92}
                 />
+                {d.marker !== null &&
+                  d.marker !== undefined &&
+                  Number.isFinite(d.marker) &&
+                  (d.marker as number) > 0 &&
+                  (() => {
+                    const mY = yAt(d.marker as number);
+                    const cx = x + barW / 2;
+                    const half = Math.max(Math.min(barW * 0.55, 7), 4);
+                    return (
+                      <g
+                        pointerEvents="none"
+                        opacity={isHover ? 1 : hover ? 0.5 : 1}
+                      >
+                        <polygon
+                          points={`${cx},${mY - half} ${cx + half},${mY} ${cx},${mY + half} ${cx - half},${mY}`}
+                          fill="var(--accent)"
+                          stroke="#ffffff"
+                          strokeWidth={1.25}
+                          strokeLinejoin="round"
+                        />
+                      </g>
+                    );
+                  })()}
                 {(() => {
                   const fitsInside = h >= 18 && barW >= 18;
                   if (fitsInside) {
@@ -449,6 +489,55 @@ export function BarChart({
               </span>
             )}
           </div>
+          {hover.marker !== null &&
+            hover.marker !== undefined &&
+            Number.isFinite(hover.marker) && (
+              <div className="mt-2 pt-2 border-t hairline">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--muted)] inline-flex items-center gap-1.5">
+                    <svg
+                      aria-hidden
+                      width={10}
+                      height={10}
+                      viewBox="0 0 10 10"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <polygon
+                        points="5,0.5 9.5,5 5,9.5 0.5,5"
+                        fill="var(--accent)"
+                        stroke="#ffffff"
+                        strokeWidth={1}
+                      />
+                    </svg>
+                    {hover.markerLabel ?? "Marker"}
+                  </span>
+                  <span className="num text-[13px] font-medium">
+                    {yFormat(hover.marker)}
+                  </span>
+                </div>
+                {hover.markerMethodology && (
+                  <div className="mt-1.5 text-[11px] text-[color:var(--muted)] leading-[1.45]">
+                    {hover.markerMethodology}
+                  </div>
+                )}
+                {hover.markerSources && hover.markerSources.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {hover.markerSources.map((s, i) => (
+                      <li key={i} className="text-[11px]">
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="source-link"
+                        >
+                          {s.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           <div className="mt-2 text-[color:var(--foreground)]">
             {hover.methodology}
           </div>

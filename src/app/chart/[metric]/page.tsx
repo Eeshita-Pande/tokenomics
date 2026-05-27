@@ -32,6 +32,7 @@ export default async function MetricPage({
   if (!metric) notFound();
 
   const meta = METRIC_META[metric];
+  if (!meta) notFound();
   const facts = await getAllAiFacts();
 
   const cellFacts: EnrichedFact[] =
@@ -39,6 +40,7 @@ export default async function MetricPage({
       ? buildAmortizedFromCapex(
           facts.filter((f) => f.metric === "ai_capex"),
           5,
+          facts.filter((f) => f.metric === "ai_da_reported"),
         )
       : facts.filter((f) => f.metric === metric);
   const cellByKey = new Map<string, EnrichedFact>();
@@ -153,6 +155,18 @@ export default async function MetricPage({
               {p}
             </p>
           ))}
+
+          {(metric === "ai_revenue" ||
+            metric === "ai_operating_profit" ||
+            metric === "ai_capex" ||
+            metric === "ai_capex_amortized") && (
+            <p className="mb-3">
+              <span className="text-[color:var(--foreground)]">
+                NVIDIA carve-out.
+              </span>{" "}
+              {SHARED_NOTES.nvdaCarveout}
+            </p>
+          )}
 
           <p className="mb-3">
             <span className="text-[color:var(--foreground)]">

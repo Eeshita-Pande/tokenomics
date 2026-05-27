@@ -65,7 +65,13 @@ export function SnapshotChart({
   const values = data
     .filter((d) => d.value !== null && Number.isFinite(d.value))
     .map((d) => d.value as number);
-  const [yMin, yMax] = niceDomain(values);
+  const markerDomainValues = data
+    .filter((d) => {
+      const hint = d.markerDomainMax ?? d.marker;
+      return hint !== null && hint !== undefined && Number.isFinite(hint);
+    })
+    .map((d) => (d.markerDomainMax ?? d.marker) as number);
+  const [yMin, yMax] = niceDomain([...values, ...markerDomainValues]);
 
   const groupW = innerW / groups.length;
   const groupPadding = 8;
@@ -154,19 +160,44 @@ export function SnapshotChart({
           const d = data.find((dx) => dx.group === g && dx.series === s.id);
           const x = xGroupStart(gi) + si * (barW + 1);
           const value = d?.value ?? null;
-          if (value === null || !Number.isFinite(value)) return null;
-          const y = value >= 0 ? yAt(value) : zeroY;
-          const h = Math.abs(yAt(value) - zeroY);
+          const marker =
+            d?.marker !== null &&
+            d?.marker !== undefined &&
+            Number.isFinite(d?.marker)
+              ? (d.marker as number)
+              : null;
+          if (
+            (value === null || !Number.isFinite(value)) &&
+            marker === null
+          ) {
+            return null;
+          }
+          const drawnValue = value !== null && Number.isFinite(value) ? value : 0;
+          const y = drawnValue >= 0 ? yAt(drawnValue) : zeroY;
+          const h = Math.abs(yAt(drawnValue) - zeroY);
+          const cx = x + barW / 2;
+          const half = Math.max(Math.min(barW * 0.85, 4), 2.5);
           return (
-            <rect
-              key={`${g}-${s.id}`}
-              x={x}
-              y={y}
-              width={barW}
-              height={Math.max(h, 0.5)}
-              fill={s.color}
-              opacity={0.92}
-            />
+            <g key={`${g}-${s.id}`}>
+              {value !== null && Number.isFinite(value) && (
+                <rect
+                  x={x}
+                  y={y}
+                  width={barW}
+                  height={Math.max(h, 0.5)}
+                  fill={s.color}
+                  opacity={0.92}
+                />
+              )}
+              {marker !== null && marker > 0 && (
+                <polygon
+                  points={`${cx},${yAt(marker) - half} ${cx + half},${yAt(marker)} ${cx},${yAt(marker) + half} ${cx - half},${yAt(marker)}`}
+                  fill="var(--accent)"
+                  stroke="#ffffff"
+                  strokeWidth={0.6}
+                />
+              )}
+            </g>
           );
         }),
       )}

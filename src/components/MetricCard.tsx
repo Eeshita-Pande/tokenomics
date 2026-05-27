@@ -20,12 +20,14 @@ type Props = {
 
 export function MetricCard({ metric, facts, usefulLife = 5 }: Props) {
   const meta = METRIC_META[metric];
+  if (!meta) return null;
 
   const source =
     metric === "ai_capex_amortized"
       ? buildAmortizedFromCapex(
           facts.filter((f) => f.metric === "ai_capex"),
           usefulLife,
+          facts.filter((f) => f.metric === "ai_da_reported"),
         )
       : facts.filter((f) => f.metric === metric);
 
@@ -47,6 +49,8 @@ export function MetricCard({ metric, facts, usefulLife = 5 }: Props) {
         methodology: "",
         sources: [],
         note: null,
+        marker: f?.marker ?? null,
+        markerDomainMax: f?.markerDomainMax ?? null,
       });
     }
   }

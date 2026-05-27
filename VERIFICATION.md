@@ -93,9 +93,25 @@ CIK 1045810 · Fiscal year ends late January.
 
 > **Calendar offset:** NVDA FY26 ended Jan 25, 2026 — that period covers calendar 2025 plus three weeks of January 2026. We label NVDA bars by the FY year, which is how every analyst, press release, and the 10-K refer to them.
 
+### NVDA AI carve-out — what's in, what's out
+
+NVDA reports financials at two grains: a **market-platform** revenue disaggregation (Data Center, Gaming, Pro Viz, Auto, OEM/Other) and a **reportable-segment** revenue + operating-income disclosure (Compute & Networking, Graphics). Operating income is **only** disclosed at the segment grain.
+
+| Line | What this dashboard counts as AI | What it excludes |
+| --- | --- | --- |
+| AI revenue | **Data Center market-platform** only | Gaming (consumer GeForce), Pro Viz (workstation/Omniverse consumer), Automotive (Drive Orin/Thor + cockpit infotainment), OEM/Other |
+| AI operating profit | **Compute & Networking** reportable segment (Data Center compute + Mellanox networking + Auto Drive + DGX systems + Jetson edge AI) | **Graphics** reportable segment (Gaming + Pro Viz consumer + Auto infotainment) |
+| AI capex | Whole-company purchases of PP&E + intangibles from the cash-flow statement | NVDA is fabless — TSMC bears the foundry capex. Most NVDA PP&E is corporate (offices, internal R&D supercomputers like Eos, lab/test equipment), not AI data-center build-out. Shown for comparability. |
+
+> **Why not just use total NVDA revenue and net income, like [isaiprofitable.com](https://isaiprofitable.com/) does?** Total NVDA revenue ($130.5B FY25, ~$216B FY26) lumps in Gaming, Pro Viz, Auto, and OEM — these use NVDA silicon but the revenue isn't driven by AI demand. Sell-side analysts (Morgan Stanley, Bernstein) and NVDA's own earnings-call commentary define the AI franchise as Data Center. We follow that convention.
+
+> **Why C&N and not Data Center for op income?** NVIDIA does not separately break out Data Center operating income. C&N is the closest available proxy. C&N is *slightly* broader than pure Data Center because it also bundles Mellanox networking (~$13B FY25, $31B FY26 — but this is AI-cluster fabric, almost entirely AI-attributable), Auto Drive (AI for AVs), and DGX/Jetson. So C&N slightly overstates pure Data Center op income but understates "all NVDA AI" by excluding the slice of Graphics revenue used for AI workloads on consumer GPUs (small).
+
+> **Why is NVDA capex tiny vs. hyperscalers?** NVDA designs chips and sells them; it does not operate hyperscale data centers and it does not own fabs. The economically meaningful capital commitment NVDA makes is its **supply-commitments line** — $50.3B at Q3 FY26 for TSMC wafers, HBM3e from SK hynix/Micron, and CoWoS advanced packaging. That's a purchase obligation, not capex, so it does not appear in the chart. If you want to compare NVDA's "capital at risk" to a hyperscaler's capex, use that figure instead.
+
 | Metric | Year | Value | Source | Where in source |
 | --- | --- | --- | --- | --- |
-| AI revenue | FY22 | $10.61B | [NVDA 10-K FY22](https://www.sec.gov/Archives/edgar/data/1045810/000104581022000036/nvda-20220130.htm) | "Segment Information" → Data Center → Revenue |
+| AI revenue | FY22 | $10.61B | [NVDA 10-K FY22](https://www.sec.gov/Archives/edgar/data/1045810/000104581022000036/nvda-20220130.htm) | Revenue by market platform → Data Center |
 | AI revenue | FY23 | $15.01B | [NVDA 10-K FY23](https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/nvda-20230129.htm) | Same |
 | AI revenue | FY24 | $47.52B | [NVDA 10-K FY24](https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm) | Same |
 | AI revenue | FY25 | $115.19B | [NVDA 10-K FY25](https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm) | Same |
@@ -104,11 +120,22 @@ CIK 1045810 · Fiscal year ends late January.
 | AI operating profit | FY23 | $5.08B | Same 10-K FY23 link | Same |
 | AI operating profit | FY24 | $32.02B | Same 10-K FY24 link | Same |
 | AI operating profit | FY25 | $82.88B | Same 10-K FY25 link | Same |
-| AI operating profit | FY26 | $130.1B | Same 10-K FY26 link | Same. Includes the $4.5B H20 inventory/PO charge taken in Q1 FY26. |
+| AI operating profit | FY26 | $130.1B | Same 10-K FY26 link | Same. Net of the $4.5B H20 inventory/PO charge taken in Q1 FY26. |
+| AI capex | FY22 | $0.98B | Same 10-K FY22 link | Cash-flow statement → "Purchases related to property and equipment and intangible assets" |
+| AI capex | FY23 | $1.83B | Same 10-K FY23 link | Same |
+| AI capex | FY24 | $1.07B | Same 10-K FY24 link | Same |
+| AI capex | FY25 | $3.24B | Same 10-K FY25 link | Same. Step-up driven by internal AI infrastructure (Eos supercomputer) + Blackwell test/validation capacity. |
+| AI capex | FY26 | $6.04B | Same 10-K FY26 link | Same. Full-year actual. Still 20–30× smaller than any single hyperscaler's annualized FY26 capex. |
 
-> **Why Compute & Networking and not Data Center?** NVIDIA does not separately break out Data Center segment operating income. C&N (Data Center + Networking) is the closest proxy; Data Center dominates the segment.
+### Reconciliation: total NVDA revenue → AI cut
 
-NVDA has no AI capex row because its capex is immaterial (~$1B/year — it's a chip designer, not an infrastructure operator).
+| FY | Total NVDA | Data Center (AI) | Gaming | Pro Viz | Auto | OEM/Other | DC share |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FY22 | $26.91B | $10.61B | $12.46B | $2.11B | $0.57B | $1.16B | 39% |
+| FY23 | $26.97B | $15.01B | $9.07B | $1.54B | $0.90B | $0.46B | 56% |
+| FY24 | $60.92B | $47.52B | $10.45B | $1.55B | $1.09B | $0.31B | 78% |
+| FY25 | $130.50B | $115.19B | $11.35B | $1.88B | $1.69B | $0.39B | 88% |
+| FY26 | ~$215.9B | $193.7B | ~$16B | (≤$3B Pro Viz/OEM combined) | ~$2.3B | (incl. above) | ~90% |
 
 ---
 
@@ -166,6 +193,37 @@ amortized = Σ (capex[prior year] / usefulLife)
 So with `usefulLife = 5` and 2022 capex of $63.6B, $63.6B/5 = $12.7B contributes to the 2022, 2023, 2024, 2025, and 2026 amortized bars.
 
 Source links in the tooltip for this view are the *contributing* capex source filings (Amazon 10-Ks, Alphabet 10-Ks, Microsoft 10-Ks). The math itself you can re-derive from the AI capex table above.
+
+### Bars vs diamonds
+
+This chart inverts the usual convention because the user wanted the sourced number to anchor the visual:
+
+- **Bars (height) = reported whole-company D&A** from each company's cash-flow statement. Fixed. Sourced. The most credible reference. Bars render for every year.
+- **Red diamonds = modeled AI capex amortized at the slider's useful life.** Computed: Σ (AI capex from prior N years) ÷ N. Diamonds move when the slider moves. Bars don't.
+- **Diamonds only render for FY25 onward.** The AI capex series in this dashboard starts at FY22. At a 5yr slider, the 2022 diamond would only include 1 real year of capex (the other 4 zero out), so it would undercount by ~80%. To avoid that artifact, we suppress diamonds for FY22–FY24. The bars remain so you can still see reported D&A in those years.
+- **Y-axis is pinned** to the worst-case modeled value (diamond at slider = 3yr, the minimum, for FY26). It doesn't rescale when you drag the slider, so the only thing changing visually is diamond position.
+
+| Company | FY22 | FY23 | FY24 | FY25 | FY26 |
+| --- | --- | --- | --- | --- | --- |
+| Amazon | $41.9B | $48.7B | $52.8B | $65.8B | $75.8B (Q1×4) |
+| Alphabet | $15.3B | $11.9B (4→6yr ext) | $15.3B | ~$55B est | ~$70B est |
+| Microsoft | $14.5B | $13.9B (4→6yr ext) | $22.3B | $34.2B | ~$52B est |
+| NVIDIA | $1.2B | $1.5B | $1.5B | $4.1B | $5.8B |
+| OpenAI | $0 | $0 | $0 | $0 | $0 |
+| Anthropic | $0 | $0 | $0 | $0 | $0 |
+
+Notes:
+- The visible FY23 D&A *dips* for Alphabet ($11.9B vs $15.3B FY22) and Microsoft ($13.9B vs $14.5B FY22) are real and reflect each company's 4→6yr server useful-life extensions, applied prospectively to in-service assets. Alphabet disclosed the change cut FY23 depreciation by ~$3.4B; Microsoft disclosed a similar prospective treatment in the FY23 10-K Property & Equipment footnote.
+- AWS extended 4→5yr (Jan 2022) and 5→6yr (Jan 2024); the FY22 D&A line includes the first of those two changes already.
+- FY25 / FY26 D&A for Alphabet and Microsoft are *estimated* (marked `quality: "estimated"` with low/high ranges in the seed) — full FY25 10-Ks were not yet published in the search results at the time of seeding. FY26 is annualized from the latest available quarter. These should be refreshed to sourced values when the filings drop.
+- OpenAI and Anthropic carry $0 because they hold no GPU PP&E — all compute is rented from hyperscalers under multi-year cloud commitments, which flows through opex, not D&A.
+- NVIDIA D&A is small in absolute terms (NVDA is fabless) but the FY25 / FY26 step-ups reflect the Eos R&D supercomputer + leased-data-center operating-lease right-of-use amortization.
+
+### How to read the chart
+
+- Slider at 6yr (current hyperscaler server policy): diamond sits at or below the bar — sanity check.
+- Slider at 3–4yr (closer to the real GPU replacement cycle today): diamonds lift above bars for the hyperscalers in 2025–2026. That gap is the implicit subsidy that current accounting policies provide to reported earnings.
+- Scope nuance: the diamond uses the dashboard's **AI-attributable capex carve-out** (e.g., ~90% of Amazon's whole-company FY26 capex), while the bar is **whole-company** reported D&A because no hyperscaler discloses an AI-only D&A line. The bar therefore *over-counts* AI-attributable depreciation flow — true AI-only D&A is some fraction of the bar. So when the diamond lifts above the bar, the gap to AI-attributable reported D&A is even larger than what's drawn. The visible gap is a conservative lower bound on the depreciation flattering.
 
 ---
 
