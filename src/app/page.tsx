@@ -28,7 +28,7 @@ export default async function HomePage() {
             AI economics are muddy for everyone except Nvidia
           </h1>
           <p className="mt-2 text-[13px] leading-[1.5] text-[color:var(--muted)]">
-            Accounting for AI inference costs and capex, Nvidia is the only company that is in the green.
+            After accounting for AI inference, training, and other capex, Nvidia is the only company that is in the green.
           </p>
         </section>
 

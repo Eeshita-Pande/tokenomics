@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/Header";
 import { MetricDetailView } from "@/components/MetricDetailView";
+import { ChartLegend, type LegendItem } from "@/components/ChartLegend";
 import { CombinedRevenueProfitChart } from "@/components/chart/CombinedRevenueProfitChart";
 import { CumulativeNetChart } from "@/components/chart/CumulativeNetChart";
 import { getAllAiFacts } from "@/lib/ai-economics-server";
@@ -147,6 +148,41 @@ function MethodologyBlock({
   );
 }
 
+function CollapsibleSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group pt-8 text-[13px] leading-[1.6] text-[color:var(--muted)]">
+      <summary className="list-none cursor-pointer select-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
+        <svg
+          className="text-[color:var(--foreground)] transition-transform duration-150 group-open:rotate-90"
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          aria-hidden
+        >
+          <path
+            d="M3.5 1.5L7 5L3.5 8.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--foreground)]">
+          {title}
+        </span>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}
+
 function SharedFooter({ metrics }: { metrics: Metric[] }) {
   const showNvda = metrics.some((m) =>
     [
@@ -202,6 +238,20 @@ function DerivedDetail({
   const isCombined = view.slug === "ai-revenue-and-profit";
   const isCumulative = view.slug === "ai-cumulative-net";
 
+  const legendItems: LegendItem[] = isCombined
+    ? [
+        { shape: "solid", label: "AI revenue" },
+        { shape: "dashed", label: "AI operating cost (visible gap = operating profit)" },
+      ]
+    : isCumulative
+      ? [
+          {
+            shape: "solid",
+            label: "Cumulative AI operating profit − cumulative AI capex (2022–2026)",
+          },
+        ]
+      : [];
+
   return (
     <>
       <div className="border hairline-strong bg-white p-4 md:p-6">
@@ -215,7 +265,7 @@ function DerivedDetail({
                 tickers={tickers}
                 tickerLabels={COMPANY_LABEL}
                 size="full"
-                height={820}
+                height={1100}
               />
             );
           })()}
@@ -226,14 +276,12 @@ function DerivedDetail({
             height={480}
           />
         )}
+        <ChartLegend items={legendItems} />
       </div>
 
       <div className="mt-12 border-t hairline" />
 
-      <section className="pt-8 text-[13px] leading-[1.6] text-[color:var(--muted)]">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--foreground)] mb-3">
-          Sources
-        </div>
+      <CollapsibleSection title="Sources">
         <p className="mb-4 text-[12px]">
           Each cell links to the exact filing, press release, or article the
           number is drawn from. This view combines{" "}
@@ -250,14 +298,11 @@ function DerivedDetail({
             heading={`${METRIC_LABELS[m]} sources`}
           />
         ))}
-      </section>
+      </CollapsibleSection>
 
       <div className="mt-12 border-t hairline" />
 
-      <section className="pt-8 text-[13px] leading-[1.6] text-[color:var(--muted)]">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--foreground)] mb-3">
-          Methodology
-        </div>
+      <CollapsibleSection title="Methodology">
         {view.sourceMetrics.map((m) => {
           const meta = METRIC_META[m];
           if (!meta) return null;
@@ -270,7 +315,7 @@ function DerivedDetail({
           );
         })}
         <SharedFooter metrics={view.sourceMetrics} />
-      </section>
+      </CollapsibleSection>
     </>
   );
 }
@@ -300,7 +345,7 @@ export default async function MetricPage({
       <Header />
       <main className="mx-auto max-w-[1440px] px-6 py-10 flex-1">
         <div className="flex items-start justify-between gap-6 mb-6">
-          <section className="max-w-[820px]">
+          <section className="flex-1">
             <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)] mb-2">
               {kicker}
             </div>
@@ -350,10 +395,7 @@ function SingleMetricDetail({
 
       <div className="mt-12 border-t hairline" />
 
-      <section className="pt-8 text-[13px] leading-[1.6] text-[color:var(--muted)]">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--foreground)] mb-3">
-          Sources
-        </div>
+      <CollapsibleSection title="Sources">
         <p className="mb-3 text-[12px]">
           Each cell links to the exact filing, press release, or article the
           number is drawn from.
@@ -361,15 +403,11 @@ function SingleMetricDetail({
             " Amortized values are derived from the underlying capex series; the links below point to those source filings."}
         </p>
         <SourcesTable metric={metric} facts={facts} />
-      </section>
+      </CollapsibleSection>
 
       <div className="mt-12 border-t hairline" />
 
-      <section className="pt-8 text-[13px] leading-[1.6] text-[color:var(--muted)]">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--foreground)] mb-3">
-          Methodology
-        </div>
-
+      <CollapsibleSection title="Methodology">
         {meta.methodology.map((p, i) => (
           <p key={i} className="mb-3">
             {p}
@@ -377,7 +415,7 @@ function SingleMetricDetail({
         ))}
 
         <SharedFooter metrics={[metric]} />
-      </section>
+      </CollapsibleSection>
     </>
   );
 }

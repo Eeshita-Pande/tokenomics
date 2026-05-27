@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BarChart, type BarDatum } from "@/components/chart/BarChart";
+import { ChartLegend, type LegendItem } from "@/components/ChartLegend";
 import {
   COMPANY_LABEL,
   COMPANY_ORDER,
@@ -71,6 +72,20 @@ export function MetricDetailView({ metric, facts }: Props) {
 
   const showAmortizedSlider = metric === "ai_capex_amortized";
 
+  const legendItems: LegendItem[] =
+    metric === "ai_capex_amortized"
+      ? [
+          { shape: "solid", label: "Reported D&A (whole-company)" },
+          { shape: "diamond", label: "Modeled AI capex amortized" },
+        ]
+      : metric === "ai_revenue"
+        ? [{ shape: "solid", label: "AI revenue" }]
+        : metric === "ai_operating_profit"
+          ? [{ shape: "solid", label: "AI operating profit" }]
+          : metric === "ai_capex"
+            ? [{ shape: "solid", label: "AI capex" }]
+            : [];
+
   return (
     <div>
       {showAmortizedSlider && (
@@ -106,18 +121,7 @@ export function MetricDetailView({ metric, facts }: Props) {
               />
             </svg>
             <span>
-              Bars = reported whole-company D&A (fixed, from the 10-K
-              cash-flow statement). Red diamonds = modeled AI capex amortized
-              at the slider's useful life. The y-axis is pinned to the
-              worst-case modeled value so it stays stable as you drag.
-              Bring the slider toward 3–4yr (closer to the real GPU
-              replacement cycle) — when a diamond lifts above its bar, that's
-              the gap between what the P&L recognizes and what depreciation
-              would look like at that effective life. Diamonds only render
-              for 2025 onward, because the AI capex series in this dashboard
-              starts at FY22 — earlier diamonds would undercount by
-              construction (missing prior-year capex would zero out in the
-              formula).
+              AI D&A at useful life
             </span>
           </div>
         </div>
@@ -135,6 +139,7 @@ export function MetricDetailView({ metric, facts }: Props) {
           yFormat={fmtMoney}
           height={480}
         />
+        <ChartLegend items={legendItems} />
       </div>
     </div>
   );

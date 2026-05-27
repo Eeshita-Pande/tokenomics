@@ -143,9 +143,12 @@ export function CombinedRevenueProfitChart({
   const W = dims.w;
   const H = dims.h;
 
+  // Full mode reserves left padding for per-row company logos that sit just
+  // past the leftmost bar edge in the negative axis area. Snapshot has no
+  // logos, so left padding is just the year-label column.
   const PAD = isFull
-    ? { top: 22, right: 100, bottom: 38, left: 60 }
-    : { top: 8, right: 40, bottom: 22, left: 40 };
+    ? { top: 22, right: 100, bottom: 38, left: 96 }
+    : { top: 8, right: 30, bottom: 22, left: 40 };
 
   const innerW = Math.max(W - PAD.left - PAD.right, 100);
   const innerH = Math.max(H - PAD.top - PAD.bottom, 80);
@@ -288,7 +291,7 @@ export function CombinedRevenueProfitChart({
           return (
             <g key={`row-${year}`}>
               <text
-                x={PAD.left - (isFull ? 10 : 6)}
+                x={PAD.left - (isFull ? 36 : 6)}
                 y={rowTop + barAreaH / 2}
                 textAnchor="end"
                 dominantBaseline="middle"
@@ -326,24 +329,45 @@ export function CombinedRevenueProfitChart({
                 const revLeft = Math.min(x0, xRev);
                 const revWidth = Math.abs(xRev - x0);
 
+                // Cost overlay = the operating-cost portion of the bar.
+                // - Positive profit: dashed sits in the LEFT portion of the
+                //   revenue bar, spanning [0, costs] where costs = rev - prof.
+                //   The remaining solid color on the right = profit margin.
+                // - Negative profit: dashed spans [profit, revenue], covering
+                //   the full revenue bar AND extending into the negative axis
+                //   by the excess-cost amount (= |profit|).
                 let costLeft: number | null = null;
                 let costWidth = 0;
-                if (xProf !== null) {
-                  costLeft = Math.min(xProf, xRev);
-                  costWidth = Math.abs(xRev - xProf);
+                if (prof !== null && Number.isFinite(prof)) {
+                  if (prof >= 0) {
+                    const xCosts = xAt(rev - prof);
+                    costLeft = Math.min(x0, xCosts);
+                    costWidth = Math.abs(xCosts - x0);
+                  } else if (xProf !== null) {
+                    costLeft = Math.min(xProf, xRev);
+                    costWidth = Math.abs(xRev - xProf);
+                  }
                 }
 
+                // Full mode: logo sits just past the leftmost edge of each
+                // bar (negative-cost overlay end when profit < 0, otherwise
+                // the zero line) on EVERY year row.
+                // Snapshot mode: logo sits just past the bar's right end, on
+                // the LATEST-year row only (original MetricCard convention).
+                const negProfX =
+                  prof !== null && Number.isFinite(prof) && prof < 0
+                    ? xAt(prof)
+                    : null;
+                const leftmostBarX = negProfX !== null ? negProfX : x0;
                 const isLatest = year === latestYear;
+
                 const isHover =
                   hover?.year === year && hover?.ticker === ticker;
                 const fadeOther = hover && !isHover;
 
-                // Label placement (full mode only): show revenue value at the
-                // right edge of the bar. Profit value (small, italic) below
-                // the revenue label.
-                const labelX = isLatest
-                  ? xRev + logoSize + 8
-                  : xRev + 6;
+                // Label placement (full mode only): revenue value at the
+                // right edge of the bar; profit value (small) below it.
+                const labelX = xRev + 6;
                 const showLabels = isFull;
                 const revText = barLabel(rev);
                 const profText =
@@ -390,9 +414,13 @@ export function CombinedRevenueProfitChart({
                         />
                       </>
                     )}
-                    {isLatest && rev > 0 && (
+                    {rev > 0 && (isFull || isLatest) && (
                       <foreignObject
-                        x={xRev + 4}
+                        x={
+                          isFull
+                            ? leftmostBarX - logoSize - 4
+                            : xRev + 4
+                        }
                         y={by + (barH - logoSize) / 2}
                         width={logoSize}
                         height={logoSize}

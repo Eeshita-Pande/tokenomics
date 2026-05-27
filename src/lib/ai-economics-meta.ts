@@ -13,10 +13,10 @@ export const METRIC_META: Partial<Record<Metric, MetricMeta>> = {
   ai_capex: {
     metric: "ai_capex",
     slug: "ai-capex",
-    kicker: "Capital expenditure",
-    title: "AI capex",
+    kicker: "AI Capital expenditure",
+    title: "AI capex has increased 5 to 18 fold for most. Just not for Nvidia.",
     description:
-      "AI-specific carve-out of whole-company capex for Amazon and Microsoft (per-year AI share rising from ~25% in 2022 to ~90% in 2026). Whole-company capex for Google as a bear-case upper bound. NVIDIA shows PP&E additions ($1–6B/yr) — small because NVDA is fabless; the real NVDA capital commitment is the $50B+ supply-commitments line, not capex. OpenAI and Anthropic show ~$0 — they don't own GPUs; their compute is rented from hyperscalers and shows up as opex, not capex.",
+      "In response to increased AI demand, AI capex has increased upto 18x it's 2022 level. Nvidia has seen a 6x increase but on a tiny base as it's fabless. Anthropic and OpenAI training costs are accounted for in operating expenses.",
     methodology: [
       "Amazon: AI-specific carve-out of whole-company capex (NOT bear-case whole-company). Per-year AI share applied: ~20% (2022) → 30% (2023) → 65% (2024) → 85% (2025) → 90% (2026). The share is anchored to: (a) Andy Jassy Q4 2025 call — \"vast majority of [2025] capex on AI for AWS\"; (b) Amazon Q4 2025 8-K — the $50.7B y/y capex increase was \"primarily to fund AI infrastructure\"; (c) Amazon Q1 2026 10-Q — $59.3B TTM y/y increase \"mainly reflecting investments in artificial intelligence\"; (d) Jassy Q1 2026 — FY26 ~$200B capex \"predominantly for AWS and AI infrastructure.\" Pre-AI-boom shares (2022-2023) are backward-extrapolated estimates.",
       "Microsoft: AI-specific carve-out of \"Purchases of property and equipment\" from the SEC cash-flow statement (EXCLUDES finance leases — Microsoft uses leases heavily for data center equipment, so its own lease-inclusive FY26 guidance is ~$190B vs ~$123.5B PP&E-only). Per-year AI share applied: ~25% (FY22) → 40% (FY23) → 65% (FY24) → 85% (FY25) → 90% (FY26). Anchored to FY25 10-K management commentary attributing majority to AI infrastructure, Q2 FY26 disclosure of $37.5B quarter on \"AI-related infrastructure,\" and Q3 FY26 guidance raised to $190B (including leases) on $25B HBM/memory cost impact — a direct AI dependency.",
@@ -28,10 +28,10 @@ export const METRIC_META: Partial<Record<Metric, MetricMeta>> = {
   ai_capex_amortized: {
     metric: "ai_capex_amortized",
     slug: "ai-capex-amortized",
-    kicker: "Depreciation flow",
-    title: "AI capex — amortized",
+    kicker: "AI capex amortization",
+    title: "Amortization could be off by ~40% which would reduce profits significantly",
     description:
-      "Bars = reported whole-company D&A from each 10-K's cash-flow statement (fixed, sourced — the most credible reference point). Red diamonds = modeled AI capex amortized straight-line at the slider's useful life. The y-axis is pinned to the worst-case modeled value so it stays put as you drag the slider. When a diamond rises above its bar, that's the gap between what the P&L is recognizing and what depreciation would be at that effective life.",
+      "Taking a 3 year amortization schedule (up from 4-5 average) increases annual costs and directly hits operating profits. If the useful life of GPUs is overstated, this would mean that profits would fall drastically for all companies as hyperscalers would need to pass the increases to model providers. In turn, this could mean significant price increases for consumers given the tight margins for model providers.",
     methodology: [
       "Bar (reported D&A): each company's whole-company \"Depreciation and amortization\" line from the cash-flow statement of the relevant 10-K (or annualized from the latest 10-Q for FY26). Sourced, fixed — doesn't change with the slider. Whole-company because no hyperscaler discloses an AI-only D&A line; we use this as the most credible reference.",
       "Diamond (modeled): straight-line amortization of the dashboard's AI-attributable capex carve-out at the slider's useful life. Formula: Σ (AI capex from prior N years) ÷ N, where N is the slider value (3–8 yr range, default 4 yr). Only the diamond moves when you drag the slider — bars and y-axis stay fixed. Diamonds only render for FY25 onward because the AI capex series in this dashboard starts at FY22; earlier-year diamonds would undercount by construction (missing prior-year capex zeros out in the formula). The bars (reported D&A) remain visible for all years.",
@@ -104,19 +104,19 @@ export const DERIVED_VIEWS: Record<string, DerivedView> = {
   "ai-revenue-and-profit": {
     slug: "ai-revenue-and-profit",
     // USER TO WRITE — placeholder copy below; safe to overwrite.
-    kicker: "Revenue & operating profit",
-    title: "AI revenue and operating profit",
+    kicker: "AI Revenue & Operating Profit",
+    title: "Nvidia continues to lead the pack",
     description:
-      "AI-only revenue per year, with operating profit shown as a dashed cost overlay. When the dashed bar fits inside the solid revenue bar, the gap to the right is profit. When the dashed bar crosses zero into the negative axis, the company is spending more on AI than it's earning — by the amount it crosses.",
+      "Amongst the main companies, everyone turned profitable except OpenAI which is far from profitable after inference and training costs. Anthropic posted a quarterly profit in Q2 2026.",
     sourceMetrics: ["ai_revenue", "ai_operating_profit"],
   },
   "ai-cumulative-net": {
     slug: "ai-cumulative-net",
     // USER TO WRITE — placeholder copy below; safe to overwrite.
-    kicker: "Cumulative net",
-    title: "AI operating profit minus AI capex (2022–2026)",
+    kicker: "Cumulative AI operating profit minus AI capex from 2022 to 2026",
+    title: "Almost $700bn has been spent on net, only Nvidia is positive",
     description:
-      "For each company: cumulative AI operating profit across 2022–2026, minus cumulative AI capex across the same window. A single number per company showing where the AI buildout sits relative to the AI revenue it has booked so far. Hyperscalers run deeply negative because capex has outpaced AI-segment profit; the frontier labs run negative because of operating losses.",
+      "Hundreds of billions spent per company. Anthropic displays exceptional cost discipline. Nvidia is an outlier with high profits and minimal capex.",
     sourceMetrics: ["ai_operating_profit", "ai_capex"],
   },
 };
