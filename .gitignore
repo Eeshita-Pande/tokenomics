@@ -41,7 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 # local data — regenerable from scripts/seed-*.ts
+# tokenomics.db is committed so Railway can serve static data without re-seeding
 *.db
+!tokenomics.db
 *.db-shm
 *.db-wal
 .gstack/

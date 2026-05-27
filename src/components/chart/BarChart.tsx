@@ -370,6 +370,18 @@ export function BarChart({
                           strokeWidth={1.25}
                           strokeLinejoin="round"
                         />
+                        <text
+                          x={cx + half + 3}
+                          y={mY}
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                          fontSize={9}
+                          fontFamily="var(--font-roboto-mono), monospace"
+                          fontWeight={500}
+                          fill="var(--accent)"
+                        >
+                          {barLabel(d.marker as number)}
+                        </text>
                       </g>
                     );
                   })()}
