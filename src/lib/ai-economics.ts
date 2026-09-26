@@ -1,4 +1,11 @@
+import { aiShareOfDaBase, REPORTED_DA_POLICY_LIFE } from "@/lib/ai-da-share";
+
 export type AiSource = { name: string; url: string; date?: string; snippet?: string };
+
+// Compact USD for inline use inside methodology prose.
+function fmtUsd(v: number): string {
+  return `$${(v / 1e9).toFixed(1)}B`;
+}
 
 export type Quality = "sourced" | "calculated" | "inconsistent" | "estimated";
 export type Metric =
@@ -66,10 +73,18 @@ export const AMORT_SLIDER_MAX = 8;
 // slider's useful life (straight-line, trailing N years ÷ N). Y-domain is
 // pinned to the maximum-possible marker (modeled at slider min) so the axis
 // doesn't rescale as the user drags the slider.
+// Which basis the BAR is drawn on.
+//   "reported" — whole-company D&A straight off the cash-flow statement.
+//                Sourced, but a different scope from the diamond.
+//   "ai-only"  — that same D&A scaled to the AI share of the depreciating
+//                asset base. Estimated, but scope-matched to the diamond.
+export type DaBasis = "reported" | "ai-only";
+
 export function buildAmortizedFromCapex(
   capexFacts: EnrichedFact[],
   usefulLifeYears: number,
   reportedDaFacts: EnrichedFact[] = [],
+  daBasis: DaBasis = "ai-only",
 ): EnrichedFact[] {
   const byTicker = new Map<string, EnrichedFact[]>();
   for (const f of capexFacts) {
@@ -143,7 +158,44 @@ export function buildAmortizedFromCapex(
     // a "$0" label for tickers with no PP&E (OAI / ANTH). Leaving the row out
     // routes the chart through its empty-bar code path: logo at the baseline,
     // no label.
-    const barValue = da?.value && Number.isFinite(da.value) ? da.value : 0;
+    const reportedDa = da?.value && Number.isFinite(da.value) ? da.value : 0;
+
+    // Scale the bar to the AI share of the depreciating asset base, so it is
+    // measured on the same scope as the diamond. GOOG/NVDA scale by 1.0 (their
+    // capex carve-out IS whole-company), so their bars are unchanged.
+    let barValue = reportedDa;
+    let barQuality = da?.quality ?? "calculated";
+    let barMethodology =
+      da?.methodology ??
+      "No reported D&A — this company does not own GPU infrastructure (compute is rented and shows up as opex, not D&A).";
+
+    if (daBasis === "ai-only" && reportedDa > 0) {
+      const aiCapexByFy = new Map(
+        (byTicker.get(ticker) ?? []).map((f) => [f.fy, f.value]),
+      );
+      const aiShare = aiShareOfDaBase(ticker, fy, aiCapexByFy);
+      if (aiShare) {
+        barValue = reportedDa * aiShare.share;
+        barQuality = "estimated";
+        barMethodology =
+          `AI-only D&A estimate: reported whole-company D&A (${fmtUsd(reportedDa)}) × ` +
+          `${(aiShare.share * 100).toFixed(0)}% AI share of the depreciating asset base. ` +
+          `The share is capex-weighted across the trailing ${REPORTED_DA_POLICY_LIFE}-year ` +
+          `policy window (FY${aiShare.windowYears[0]}–FY${aiShare.windowYears[aiShare.windowYears.length - 1]}), ` +
+          `not the single-year capex share — D&A in any year covers vintages bought when the AI ` +
+          `share was lower. Window is the hyperscalers' actual 6-year server life, so it does not ` +
+          `move with the slider.` +
+          (aiShare.truncated
+            ? ` Window is truncated at FY2022 (start of the capex series); the missing pre-AI-boom ` +
+              `vintages would lower the share, so this estimate is biased high — a conservative ` +
+              `bar, harder for the diamond to clear.`
+            : ``) +
+          (aiShare.share >= 0.999
+            ? ` Unchanged from the reported basis: this company's AI capex carve-out is whole-company capex.`
+            : ``);
+      }
+    }
+
     const hasDiamond = (modeledNow?.value ?? 0) > 0;
     if (barValue === 0 && !hasDiamond) continue;
 
@@ -154,10 +206,8 @@ export function buildAmortizedFromCapex(
       value: barValue,
       low: da?.low ?? null,
       high: da?.high ?? null,
-      quality: da?.quality ?? "calculated",
-      methodology:
-        da?.methodology ??
-        "No reported D&A — this company does not own GPU infrastructure (compute is rented and shows up as opex, not D&A).",
+      quality: barQuality,
+      methodology: barMethodology,
       sources: da?.sources ?? [],
       note: da?.note ?? null,
       marker: modeledNow?.value ?? null,

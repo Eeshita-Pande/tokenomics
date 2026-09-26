@@ -8,6 +8,7 @@ import {
   COMPANY_ORDER,
   YEARS,
   buildAmortizedFromCapex,
+  type DaBasis,
   type EnrichedFact,
   type Metric,
 } from "@/lib/ai-economics";
@@ -26,6 +27,7 @@ function fmtMoney(v: number) {
 
 export function MetricDetailView({ metric, facts }: Props) {
   const [usefulLife, setUsefulLife] = useState(3);
+  const [daBasis, setDaBasis] = useState<DaBasis>("ai-only");
 
   const visibleFacts = useMemo(() => {
     if (metric === "ai_capex_amortized") {
@@ -33,10 +35,11 @@ export function MetricDetailView({ metric, facts }: Props) {
         facts.filter((f) => f.metric === "ai_capex"),
         usefulLife,
         facts.filter((f) => f.metric === "ai_da_reported"),
+        daBasis,
       );
     }
     return facts.filter((f) => f.metric === metric);
-  }, [facts, metric, usefulLife]);
+  }, [facts, metric, usefulLife, daBasis]);
 
   const dataByCell = useMemo(() => {
     const map = new Map<string, EnrichedFact>();
@@ -75,7 +78,13 @@ export function MetricDetailView({ metric, facts }: Props) {
   const legendItems: LegendItem[] =
     metric === "ai_capex_amortized"
       ? [
-          { shape: "solid", label: "Reported D&A (whole-company)" },
+          {
+            shape: "solid",
+            label:
+              daBasis === "ai-only"
+                ? "AI-only D&A (estimated)"
+                : "Reported D&A (whole-company)",
+          },
           { shape: "diamond", label: "Modeled AI capex amortized" },
         ]
       : metric === "ai_revenue"
@@ -104,6 +113,39 @@ export function MetricDetailView({ metric, facts }: Props) {
               className="w-[220px] accent-[color:var(--accent)]"
             />
             <span className="num w-[40px]">{usefulLife} yr</span>
+          </div>
+
+          <div className="mt-3 flex items-center gap-3 text-[13px]">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Bar basis
+            </span>
+            <div className="flex border hairline-strong">
+              {(
+                [
+                  ["ai-only", "AI-only D&A"],
+                  ["reported", "Whole-company D&A"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setDaBasis(value)}
+                  aria-pressed={daBasis === value}
+                  className={`px-3 py-1 text-[12px] transition-colors ${
+                    daBasis === value
+                      ? "bg-[color:var(--foreground)] text-white"
+                      : "bg-white text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-[color:var(--muted)]">
+              {daBasis === "ai-only"
+                ? "Estimated — reported D&A scaled to the AI share of the depreciating asset base (6yr policy window). Scope-matched to the diamond."
+                : "Sourced — whole-company D&A, includes non-AI assets. Over-counts AI depreciation."}
+            </span>
           </div>
           <div className="mt-2 flex items-center gap-2 text-[11px] text-[color:var(--muted)]">
             <svg
