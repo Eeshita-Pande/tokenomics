@@ -182,6 +182,147 @@ export function BarChart({
     }
   }
 
+  // Marker-label placement.
+  //
+  // The marker label used to be pinned to the right of its diamond. That is
+  // fine while diamonds sit well clear of the bars, but once the bar is drawn
+  // on the AI-only basis the two converge, and a right-pinned label runs into
+  // the NEXT series' bar label (e.g. Microsoft's diamond label over NVIDIA's
+  // bar label at 6yr). So try four placements around the diamond and keep the
+  // first that collides with nothing already placed; if every option collides,
+  // keep whichever overlaps least.
+  //
+  // Boxes are estimated rather than measured: these are Roboto Mono at a known
+  // size, so advance width is ~0.6em per character and no DOM read is needed.
+  const estTextW = (text: string, fontSize: number) =>
+    text.length * fontSize * 0.6;
+
+  type LabelBox = { left: number; right: number; top: number; bottom: number };
+
+  // Boxes are inflated slightly: the widths are estimates, and a label that
+  // clears its neighbour by half a pixel still reads as crowded.
+  const LABEL_PAD = 2;
+
+  const boxAround = (
+    px: number,
+    cy: number,
+    w: number,
+    fontSize: number,
+    anchor: "start" | "middle" | "end",
+  ): LabelBox => {
+    const left =
+      anchor === "start" ? px : anchor === "end" ? px - w : px - w / 2;
+    return {
+      left: left - LABEL_PAD,
+      right: left + w + LABEL_PAD,
+      top: cy - fontSize / 2 - LABEL_PAD,
+      bottom: cy + fontSize / 2 + LABEL_PAD,
+    };
+  };
+
+  const overlapArea = (a: LabelBox, b: LabelBox) => {
+    const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    return ox > 0 && oy > 0 ? ox * oy : 0;
+  };
+
+  // Same geometry the render below derives, hoisted so placement can be
+  // resolved before anything is drawn.
+  const cellGeom = (g: string, sId: string) => {
+    const d = data.find((dx) => dx.group === g && dx.series === sId);
+    const v = d?.value ?? null;
+    if (!d || v === null || !Number.isFinite(v)) return null;
+    const gi = groups.indexOf(g);
+    const si = serieses.findIndex((s) => s.id === sId);
+    const x = xGroupStart(gi) + si * (barW + 2);
+    const y = v >= 0 ? yAt(v) : zeroY;
+    const h = Math.abs(yAt(v) - zeroY);
+    const staggerOffset = (staggerByCell.get(`${g}|${sId}`) ?? 0) * staggerStep;
+    return {
+      d,
+      v,
+      barCenterX: x + barW / 2,
+      y,
+      fitsInside: h >= 18 && barW >= 18,
+      logoY:
+        v >= 0
+          ? Math.max(y - logoSize - 4 - staggerOffset, PAD.top - logoSize - 2)
+          : y + h + 4 + staggerOffset,
+    };
+  };
+
+  const barLabelBox = (geom: NonNullable<ReturnType<typeof cellGeom>>) => {
+    const txt = barLabel(geom.v);
+    if (geom.fitsInside) {
+      // Drawn at y + 10 on an alphabetic baseline, so its centre sits ~4 above.
+      return boxAround(geom.barCenterX, geom.y + 6, estTextW(txt, 8), 8, "middle");
+    }
+    const outsideY = geom.v >= 0 ? geom.logoY - 3 : geom.logoY + logoSize + 3;
+    const cy =
+      geom.v >= 0
+        ? outsideY - outsideFontSize / 2
+        : outsideY + outsideFontSize / 2;
+    return boxAround(
+      geom.barCenterX,
+      cy,
+      estTextW(txt, outsideFontSize),
+      outsideFontSize,
+      "middle",
+    );
+  };
+
+  const markerHalf = Math.max(Math.min(barW * 0.55, 7), 4);
+  const markerPlacement = new Map<
+    string,
+    { x: number; y: number; anchor: "start" | "middle" | "end" }
+  >();
+
+  for (const g of groups) {
+    // Bar labels are fixed, so they all become obstacles up front.
+    const placed: LabelBox[] = [];
+    for (const s of serieses) {
+      const geom = cellGeom(g, s.id);
+      if (geom) placed.push(barLabelBox(geom));
+    }
+
+    for (const s of serieses) {
+      const geom = cellGeom(g, s.id);
+      if (!geom) continue;
+      const m = geom.d.marker;
+      if (m === null || m === undefined || !Number.isFinite(m) || m <= 0)
+        continue;
+
+      const mY = yAt(m);
+      const cx = geom.barCenterX;
+      const txt = barLabel(m);
+      const w = estTextW(txt, 9);
+
+      const candidates = [
+        { x: cx + markerHalf + 3, y: mY, anchor: "start" as const },
+        { x: cx - markerHalf - 3, y: mY, anchor: "end" as const },
+        { x: cx, y: mY - markerHalf - 7, anchor: "middle" as const },
+        { x: cx, y: mY + markerHalf + 7, anchor: "middle" as const },
+      ];
+
+      let best = candidates[0];
+      let bestScore = Infinity;
+      for (const c of candidates) {
+        const box = boxAround(c.x, c.y, w, 9, c.anchor);
+        // Never push a label outside the plot area.
+        if (box.left < PAD.left || box.right > PAD.left + innerW) continue;
+        const score = placed.reduce((acc, p) => acc + overlapArea(box, p), 0);
+        if (score < bestScore) {
+          bestScore = score;
+          best = c;
+        }
+        if (score === 0) break;
+      }
+
+      markerPlacement.set(`${g}|${s.id}`, best);
+      placed.push(boxAround(best.x, best.y, w, 9, best.anchor));
+    }
+  }
+
   const handleEnter = (
     e: React.MouseEvent<SVGRectElement | SVGGElement>,
     d: BarDatum,
@@ -357,7 +498,12 @@ export function BarChart({
                   (() => {
                     const mY = yAt(d.marker as number);
                     const cx = x + barW / 2;
-                    const half = Math.max(Math.min(barW * 0.55, 7), 4);
+                    const half = markerHalf;
+                    const place = markerPlacement.get(`${g}|${s.id}`) ?? {
+                      x: cx + half + 3,
+                      y: mY,
+                      anchor: "start" as const,
+                    };
                     return (
                       <g
                         pointerEvents="none"
@@ -371,14 +517,20 @@ export function BarChart({
                           strokeLinejoin="round"
                         />
                         <text
-                          x={cx + half + 3}
-                          y={mY}
-                          textAnchor="start"
+                          x={place.x}
+                          y={place.y}
+                          textAnchor={place.anchor}
                           dominantBaseline="middle"
                           fontSize={9}
                           fontFamily="var(--font-roboto-mono), monospace"
                           fontWeight={500}
                           fill="var(--accent)"
+                          // Halo so the label stays readable in the dense
+                          // groups where no placement is fully clear.
+                          stroke="#ffffff"
+                          strokeWidth={2.5}
+                          strokeLinejoin="round"
+                          paintOrder="stroke"
                         >
                           {barLabel(d.marker as number)}
                         </text>
